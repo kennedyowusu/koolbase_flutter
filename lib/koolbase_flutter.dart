@@ -1,4 +1,4 @@
-/// Hatchway Flutter SDK
+/// Koolbase Flutter SDK
 ///
 /// Deployment control, feature flags, and remote config for Flutter apps.
 ///
@@ -9,7 +9,7 @@
 /// void main() async {
 ///   WidgetsFlutterBinding.ensureInitialized();
 ///
-///   await Hatchway.initialize(HatchwayConfig(
+///   await Koolbase.initialize(KoolbaseConfig(
 ///     publicKey: 'pk_live_xxxx',
 ///     baseUrl: 'https://api.koolbase.com',
 ///   ));

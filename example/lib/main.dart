@@ -4,15 +4,15 @@ import 'package:koolbase_flutter/koolbase_flutter.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Hatchway.initialize(
-    const HatchwayConfig(
+  await Koolbase.initialize(
+    const KoolbaseConfig(
       publicKey: 'pk_live_6e4abe2ffba691e8e44093d9',
-      baseUrl: 'http://172.20.10.12:8080',
+      baseUrl: 'https://api.koolbase.com',
       refreshInterval: Duration(seconds: 30),
     ),
   );
 
-  final versionCheck = Hatchway.checkVersion();
+  final versionCheck = Koolbase.checkVersion();
   if (versionCheck.status == VersionStatus.forceUpdate) {
     runApp(ForceUpdateApp(message: versionCheck.message));
     return;
@@ -35,9 +35,9 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final showNewAuthFlow = Hatchway.isEnabled('new_auth_flow');
-    final swapTimeout = Hatchway.configInt('swap_timeout_config', fallback: 30);
-    final versionCheck = Hatchway.checkVersion();
+    final showNewAuthFlow = Koolbase.isEnabled('new_auth_flow');
+    final swapTimeout = Koolbase.configInt('swap_timeout_config', fallback: 30);
+    final versionCheck = Koolbase.checkVersion();
 
     return Scaffold(
       appBar: AppBar(title: const Text('Koolbase Example')),
@@ -46,8 +46,8 @@ class HomeScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Device ID: ${Hatchway.deviceId}'),
-            Text('Payload Version: ${Hatchway.payloadVersion}'),
+            Text('Device ID: ${Koolbase.deviceId}'),
+            Text('Payload Version: ${Koolbase.payloadVersion}'),
             const SizedBox(height: 16),
             Text('new_auth_flow enabled: $showNewAuthFlow'),
             Text('swap_timeout_config: ${swapTimeout}s'),

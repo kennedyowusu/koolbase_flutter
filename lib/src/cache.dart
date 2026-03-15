@@ -6,12 +6,12 @@ import 'payload.dart';
 /// 1. Start instantly without waiting for network
 /// 2. Work offline with the last known good configuration
 /// 3. Detect changes via payload_version comparison
-class HatchwayCache {
+class KoolbaseCache {
   static const _payloadKey = 'koolbase_bootstrap_payload';
   static const _timestampKey = 'koolbase_bootstrap_timestamp';
 
   /// Saves the bootstrap payload to local storage.
-  static Future<void> save(HatchwayPayload payload) async {
+  static Future<void> save(KoolbasePayload payload) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_payloadKey, jsonEncode(payload.toJson()));
     await prefs.setInt(
@@ -21,14 +21,14 @@ class HatchwayCache {
   }
 
   /// Loads the last cached payload. Returns null if no cache exists.
-  static Future<HatchwayPayload?> load() async {
+  static Future<KoolbasePayload?> load() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_payloadKey);
     if (raw == null) return null;
 
     try {
       final json = jsonDecode(raw) as Map<String, dynamic>;
-      return HatchwayPayload.fromJson(json);
+      return KoolbasePayload.fromJson(json);
     } catch (_) {
       // Cache is corrupted — clear it
       await prefs.remove(_payloadKey);

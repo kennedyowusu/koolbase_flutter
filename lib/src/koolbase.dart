@@ -10,7 +10,7 @@ import 'payload.dart';
 export 'payload.dart';
 
 /// Configuration for the Koolbase SDK.
-class HatchwayConfig {
+class KoolbaseConfig {
   /// Your environment public key (e.g. pk_live_xxxx or pk_test_xxxx)
   final String publicKey;
 
@@ -21,7 +21,7 @@ class HatchwayConfig {
   /// Defaults to 60 seconds.
   final Duration refreshInterval;
 
-  const HatchwayConfig({
+  const KoolbaseConfig({
     required this.publicKey,
     required this.baseUrl,
     this.refreshInterval = const Duration(seconds: 60),
@@ -32,46 +32,46 @@ class HatchwayConfig {
 ///
 /// Usage:
 /// ```dart
-/// await Hatchway.initialize(HatchwayConfig(
+/// await Koolbase.initialize(KoolbaseConfig(
 ///   publicKey: 'pk_live_xxxx',
 ///   baseUrl: 'https://api.koolbase.com',
 /// ));
 ///
 /// // Check a flag
-/// if (Hatchway.isEnabled('new_swap_flow')) {
+/// if (Koolbase.isEnabled('new_swap_flow')) {
 ///   // show new flow
 /// }
 ///
 /// // Read config
-/// final timeout = Hatchway.configInt('swap_timeout_seconds', fallback: 30);
+/// final timeout = Koolbase.configInt('swap_timeout_seconds', fallback: 30);
 /// ```
-class Hatchway {
-  static Hatchway? _instance;
+class Koolbase {
+  static Koolbase? _instance;
 
-  final HatchwayConfig _config;
-  HatchwayPayload _payload;
+  final KoolbaseConfig _config;
+  KoolbasePayload _payload;
   String _deviceId = '';
   String _appVersion = '';
   String _platform = '';
 
-  Hatchway._(this._config, this._payload);
+  Koolbase._(this._config, this._payload);
 
   /// Initializes the SDK. Call this in main() before runApp().
   ///
   /// 1. Loads cached payload immediately (instant startup)
   /// 2. Fetches fresh payload from API in background
   /// 3. Starts background refresh polling
-  static Future<void> initialize(HatchwayConfig config) async {
+  static Future<void> initialize(KoolbaseConfig config) async {
     final deviceId = await DeviceIdManager.getOrCreate();
     final packageInfo = await PackageInfo.fromPlatform();
     final appVersion = packageInfo.version;
     final platform = _getPlatform();
 
     // Load cached payload immediately — app doesn't wait for network
-    final cached = await HatchwayCache.load();
-    final payload = cached ?? HatchwayPayload.empty();
+    final cached = await KoolbaseCache.load();
+    final payload = cached ?? KoolbasePayload.empty();
 
-    final instance = Hatchway._(config, payload);
+    final instance = Koolbase._(config, payload);
     instance._deviceId = deviceId;
     instance._appVersion = appVersion;
     instance._platform = platform;
@@ -84,10 +84,10 @@ class Hatchway {
     instance._startPolling();
   }
 
-  static Hatchway get _client {
+  static Koolbase get _client {
     assert(
       _instance != null,
-      'Hatchway not initialized. Call Hatchway.initialize() first.',
+      'Koolbase not initialized. Call Koolbase.initialize() first.',
     );
     return _instance!;
   }
@@ -223,12 +223,12 @@ class Hatchway {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
-        final freshPayload = HatchwayPayload.fromJson(json);
+        final freshPayload = KoolbasePayload.fromJson(json);
 
         // Only update if payload actually changed
         if (freshPayload.payloadVersion != _payload.payloadVersion) {
           _payload = freshPayload;
-          await HatchwayCache.save(freshPayload);
+          await KoolbaseCache.save(freshPayload);
           debugPrint(
               '[Koolbase] Payload updated: ${freshPayload.payloadVersion}');
         } else {

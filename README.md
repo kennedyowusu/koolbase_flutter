@@ -17,8 +17,8 @@ Initialize the SDK before `runApp()`:
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Hatchway.initialize(HatchwayConfig(
-    publicKey: 'pk_live_xxxx',  // From your Hatchway dashboard
+  await Koolbase.initialize(KoolbaseConfig(
+    publicKey: 'pk_live_xxxx',  // From your Koolbase dashboard
     baseUrl: 'https://api.koolbase.com',
   ));
 
@@ -29,7 +29,7 @@ void main() async {
 ## Feature Flags
 
 ```dart
-if (Hatchway.isEnabled('new_checkout')) {
+if (Koolbase.isEnabled('new_checkout')) {
   // show new checkout
 }
 ```
@@ -37,15 +37,15 @@ if (Hatchway.isEnabled('new_checkout')) {
 ## Remote Config
 
 ```dart
-final timeout = Hatchway.configInt('swap_timeout_seconds', fallback: 30);
-final url = Hatchway.configString('api_base_url', fallback: 'https://api.example.com');
-final debugMode = Hatchway.configBool('debug_mode', fallback: false);
+final timeout = Koolbase.configInt('swap_timeout_seconds', fallback: 30);
+final url = Koolbase.configString('api_base_url', fallback: 'https://api.example.com');
+final debugMode = Koolbase.configBool('debug_mode', fallback: false);
 ```
 
 ## Version Enforcement
 
 ```dart
-final result = Hatchway.checkVersion();
+final result = Koolbase.checkVersion();
 
 switch (result.status) {
   case VersionStatus.forceUpdate:
