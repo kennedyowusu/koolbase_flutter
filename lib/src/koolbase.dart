@@ -263,7 +263,7 @@ class Koolbase {
   static int _parseVersion(String version) {
     if (version.isEmpty) return 0;
     final parts = version.split('.').map((p) => int.tryParse(p) ?? 0).toList();
-    final major = parts.length > 0 ? parts[0] : 0;
+    final major = parts.isNotEmpty ? parts[0] : 0;
     final minor = parts.length > 1 ? parts[1] : 0;
     final patch = parts.length > 2 ? parts[2] : 0;
     return major * 10000 + minor * 100 + patch;
