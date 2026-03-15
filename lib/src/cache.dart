@@ -7,8 +7,8 @@ import 'payload.dart';
 /// 2. Work offline with the last known good configuration
 /// 3. Detect changes via payload_version comparison
 class HatchwayCache {
-  static const _payloadKey = 'hatchway_bootstrap_payload';
-  static const _timestampKey = 'hatchway_bootstrap_timestamp';
+  static const _payloadKey = 'koolbase_bootstrap_payload';
+  static const _timestampKey = 'koolbase_bootstrap_timestamp';
 
   /// Saves the bootstrap payload to local storage.
   static Future<void> save(HatchwayPayload payload) async {

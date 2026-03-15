@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hatchway_flutter/hatchway_flutter.dart';
+import 'package:koolbase_flutter/koolbase_flutter.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

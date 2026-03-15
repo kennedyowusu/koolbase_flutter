@@ -7,7 +7,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 /// This ID is stable across app restarts and is used for deterministic
 /// rollout bucketing: stableHash(deviceId + ":" + flagKey) % 100
 class DeviceIdManager {
-  static const _storageKey = 'hatchway_device_id';
+  static const _storageKey = 'koolbase_device_id';
   static const _storage = FlutterSecureStorage();
   static String? _cached;
 

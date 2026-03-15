@@ -1,12 +1,12 @@
-# hatchway_flutter
+# koolbase_flutter
 
-Flutter SDK for [Hatchway](https://hatchway.dev) — deployment control, feature flags, and remote config for mobile apps.
+Flutter SDK for [Koolbase](https://koolbase.com) — feature flags, remote config, and version enforcement for mobile apps.
 
 ## Installation
 
 ```yaml
 dependencies:
-  hatchway_flutter: ^0.1.0
+  koolbase_flutter: ^1.0.0
 ```
 
 ## Setup
@@ -19,7 +19,7 @@ void main() async {
 
   await Hatchway.initialize(HatchwayConfig(
     publicKey: 'pk_live_xxxx',  // From your Hatchway dashboard
-    baseUrl: 'https://api.hatchway.dev',
+    baseUrl: 'https://api.koolbase.com',
   ));
 
   runApp(MyApp());
