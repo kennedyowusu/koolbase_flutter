@@ -3,11 +3,16 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
+import 'auth/auth_api.dart';
+import 'auth/auth_client.dart';
+import 'auth/auth_storage.dart';
 import 'cache.dart';
 import 'device_id.dart';
 import 'evaluator.dart';
 import 'payload.dart';
 export 'payload.dart';
+export 'auth/auth_models.dart';
+export 'auth/auth_exceptions.dart';
 
 /// Configuration for the Koolbase SDK.
 class KoolbaseConfig {
@@ -18,7 +23,6 @@ class KoolbaseConfig {
   final String baseUrl;
 
   /// How often the SDK refreshes the bootstrap payload in the background.
-  /// Defaults to 60 seconds.
   final Duration refreshInterval;
 
   const KoolbaseConfig({
@@ -32,21 +36,22 @@ class KoolbaseConfig {
 ///
 /// Usage:
 /// ```dart
-/// await Koolbase.initialize(KoolbaseConfig(
+/// await Koolbase.initialize(const KoolbaseConfig(
 ///   publicKey: 'pk_live_xxxx',
 ///   baseUrl: 'https://api.koolbase.com',
 /// ));
 ///
-/// // Check a flag
-/// if (Koolbase.isEnabled('new_swap_flow')) {
-///   // show new flow
-/// }
+/// // Feature flags
+/// if (Koolbase.isEnabled('new_ui')) { ... }
 ///
-/// // Read config
-/// final timeout = Koolbase.configInt('swap_timeout_seconds', fallback: 30);
+/// // Auth
+/// await Koolbase.auth.login(email: '...', password: '...');
+/// final user = Koolbase.auth.currentUser;
 /// ```
 class Koolbase {
   static Koolbase? _instance;
+  static KoolbaseAuthClient? _auth;
+  static bool _initialized = false;
 
   final KoolbaseConfig _config;
   KoolbasePayload _payload;
@@ -57,17 +62,15 @@ class Koolbase {
   Koolbase._(this._config, this._payload);
 
   /// Initializes the SDK. Call this in main() before runApp().
-  ///
-  /// 1. Loads cached payload immediately (instant startup)
-  /// 2. Fetches fresh payload from API in background
-  /// 3. Starts background refresh polling
   static Future<void> initialize(KoolbaseConfig config) async {
+    if (_initialized) return;
+
     final deviceId = await DeviceIdManager.getOrCreate();
     final packageInfo = await PackageInfo.fromPlatform();
     final appVersion = packageInfo.version;
     final platform = _getPlatform();
 
-    // Load cached payload immediately — app doesn't wait for network
+    // Load cached payload immediately
     final cached = await KoolbaseCache.load();
     final payload = cached ?? KoolbasePayload.empty();
 
@@ -77,24 +80,48 @@ class Koolbase {
     instance._platform = platform;
     _instance = instance;
 
-    // Fetch fresh payload in background — non-blocking
-    instance._fetchAndUpdate();
+    // Initialize auth client
+    final authApi = AuthApi(
+      baseUrl: config.baseUrl,
+      publicKey: config.publicKey,
+    );
+    _auth = KoolbaseAuthClient(
+      api: authApi,
+      storage: AuthStorage(),
+    );
 
-    // Start background polling
+    // Restore auth session from secure storage
+    await _auth!.restoreSession();
+
+    // Fetch fresh flags in background
+    instance._fetchAndUpdate();
     instance._startPolling();
+
+    _initialized = true;
+  }
+
+  static void _ensureInitialized() {
+    if (!_initialized) {
+      throw StateError(
+        'Koolbase has not been initialized. '
+        'Call Koolbase.initialize() first.',
+      );
+    }
   }
 
   static Koolbase get _client {
-    assert(
-      _instance != null,
-      'Koolbase not initialized. Call Koolbase.initialize() first.',
-    );
+    _ensureInitialized();
     return _instance!;
+  }
+
+  /// Access the auth client
+  static KoolbaseAuthClient get auth {
+    _ensureInitialized();
+    return _auth!;
   }
 
   // ─── Flag Evaluation ───────────────────────────────────────────────────────
 
-  /// Returns true if the feature flag is enabled for the current device.
   static bool isEnabled(String flagKey) {
     final client = _client;
     final flag = client._payload.flags[flagKey];
@@ -110,14 +137,12 @@ class Koolbase {
 
   // ─── Config Access ─────────────────────────────────────────────────────────
 
-  /// Returns a config value as a String.
   static String configString(String key, {String fallback = ''}) {
     final value = _client._payload.config[key];
     if (value == null) return fallback;
     return value.toString();
   }
 
-  /// Returns a config value as an int.
   static int configInt(String key, {int fallback = 0}) {
     final value = _client._payload.config[key];
     if (value == null) return fallback;
@@ -126,7 +151,6 @@ class Koolbase {
     return int.tryParse(value.toString()) ?? fallback;
   }
 
-  /// Returns a config value as a double.
   static double configDouble(String key, {double fallback = 0.0}) {
     final value = _client._payload.config[key];
     if (value == null) return fallback;
@@ -135,7 +159,6 @@ class Koolbase {
     return double.tryParse(value.toString()) ?? fallback;
   }
 
-  /// Returns a config value as a bool.
   static bool configBool(String key, {bool fallback = false}) {
     final value = _client._payload.config[key];
     if (value == null) return fallback;
@@ -143,7 +166,6 @@ class Koolbase {
     return value.toString() == 'true';
   }
 
-  /// Returns a config value as a Map (for JSON objects).
   static Map<String, dynamic> configMap(String key,
       {Map<String, dynamic> fallback = const {}}) {
     final value = _client._payload.config[key];
@@ -154,7 +176,6 @@ class Koolbase {
 
   // ─── Version Policy ────────────────────────────────────────────────────────
 
-  /// Checks the current app version against the version policy.
   static VersionCheckResult checkVersion() {
     final client = _client;
     final policy = client._payload.version;
@@ -171,7 +192,6 @@ class Koolbase {
     final minVersion = _parseVersion(policy.minVersion);
     final latestVersion = _parseVersion(policy.latestVersion);
 
-    // Below minimum — always force update
     if (current < minVersion) {
       return VersionCheckResult(
         status: VersionStatus.forceUpdate,
@@ -180,7 +200,6 @@ class Koolbase {
       );
     }
 
-    // Below latest — soft or force depending on policy
     if (policy.latestVersion.isNotEmpty && current < latestVersion) {
       return VersionCheckResult(
         status: policy.forceUpdate
@@ -200,10 +219,7 @@ class Koolbase {
 
   // ─── Payload Info ──────────────────────────────────────────────────────────
 
-  /// Returns the current payload version hash. Useful for debugging.
   static String get payloadVersion => _client._payload.payloadVersion;
-
-  /// Returns the stable device ID for this installation.
   static String get deviceId => _client._deviceId;
 
   // ─── Internal ──────────────────────────────────────────────────────────────
@@ -225,15 +241,12 @@ class Koolbase {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
         final freshPayload = KoolbasePayload.fromJson(json);
 
-        // Only update if payload actually changed
         if (freshPayload.payloadVersion != _payload.payloadVersion) {
           _payload = freshPayload;
           await KoolbaseCache.save(freshPayload);
-          debugPrint(
-              '[Koolbase] Payload updated: ${freshPayload.payloadVersion}');
+          debugPrint('[Koolbase] Payload updated: ${freshPayload.payloadVersion}');
         } else {
-          debugPrint(
-              '[Koolbase] Payload unchanged: ${freshPayload.payloadVersion}');
+          debugPrint('[Koolbase] Payload unchanged: ${freshPayload.payloadVersion}');
         }
       }
     } on SocketException {
@@ -257,7 +270,7 @@ class Koolbase {
       if (Platform.isAndroid) return 'android';
       if (Platform.isIOS) return 'ios';
     } catch (_) {}
-    return 'flutter'; // web or unknown
+    return 'flutter';
   }
 
   static int _parseVersion(String version) {
