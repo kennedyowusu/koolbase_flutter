@@ -1,3 +1,13 @@
+## 1.2.0
+
+- Added `Koolbase.storage` — file storage SDK
+- `upload()` — upload files directly to Cloudflare R2 via presigned URLs
+- `getDownloadUrl()` — get signed download URLs for private files
+- `delete()` — delete files from storage
+- `KoolbaseObject`, `KoolbaseBucket`, `UploadResult` models
+- Automatic content type inference from file extension
+- Three-step upload flow: get URL → upload → confirm
+
 ## 1.1.0
 
 - Added `Koolbase.auth` — full authentication SDK

@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'auth/auth_api.dart';
+import 'storage/storage_client.dart';
+export 'storage/storage_models.dart';
 import 'auth/auth_client.dart';
 import 'auth/auth_storage.dart';
 import 'cache.dart';
@@ -51,6 +53,7 @@ class KoolbaseConfig {
 class Koolbase {
   static Koolbase? _instance;
   static KoolbaseAuthClient? _auth;
+  static KoolbaseStorageClient? _storage;
   static bool _initialized = false;
 
   final KoolbaseConfig _config;
@@ -93,6 +96,12 @@ class Koolbase {
     // Restore auth session from secure storage
     await _auth!.restoreSession();
 
+    // Initialize storage client
+    _storage = KoolbaseStorageClient(
+      baseUrl: config.baseUrl,
+      publicKey: config.publicKey,
+    );
+
     // Fetch fresh flags in background
     instance._fetchAndUpdate();
     instance._startPolling();
@@ -112,6 +121,12 @@ class Koolbase {
   static Koolbase get _client {
     _ensureInitialized();
     return _instance!;
+  }
+
+  /// Access the storage client
+  static KoolbaseStorageClient get storage {
+    _ensureInitialized();
+    return _storage!;
   }
 
   /// Access the auth client
