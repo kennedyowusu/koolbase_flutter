@@ -5,6 +5,8 @@ import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'auth/auth_api.dart';
 import 'storage/storage_client.dart';
+import 'database/database_client.dart';
+export 'database/database_models.dart';
 export 'storage/storage_models.dart';
 import 'auth/auth_client.dart';
 import 'auth/auth_storage.dart';
@@ -54,6 +56,7 @@ class Koolbase {
   static Koolbase? _instance;
   static KoolbaseAuthClient? _auth;
   static KoolbaseStorageClient? _storage;
+  static KoolbaseDatabaseClient? _database;
   static bool _initialized = false;
 
   final KoolbaseConfig _config;
@@ -96,6 +99,12 @@ class Koolbase {
     // Restore auth session from secure storage
     await _auth!.restoreSession();
 
+    // Initialize database client
+    _database = KoolbaseDatabaseClient(
+      baseUrl: config.baseUrl,
+      publicKey: config.publicKey,
+    );
+
     // Initialize storage client
     _storage = KoolbaseStorageClient(
       baseUrl: config.baseUrl,
@@ -121,6 +130,12 @@ class Koolbase {
   static Koolbase get _client {
     _ensureInitialized();
     return _instance!;
+  }
+
+  /// Access the database client
+  static KoolbaseDatabaseClient get db {
+    _ensureInitialized();
+    return _database!;
   }
 
   /// Access the storage client

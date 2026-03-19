@@ -1,3 +1,16 @@
+## 1.3.0
+
+- Added `Koolbase.db` — database SDK
+- `Koolbase.db.collection('name').get()` — query records with fluent builder
+- `Koolbase.db.collection('name').where('field', isEqualTo: value).limit(20).get()`
+- `Koolbase.db.insert(collection: 'name', data: {...})` — insert records
+- `Koolbase.db.doc(id).get()` — fetch single record
+- `Koolbase.db.doc(id).update({...})` — patch record fields
+- `Koolbase.db.doc(id).delete()` — soft delete record
+- `KoolbaseRecord`, `KoolbaseCollection`, `QueryResult` models
+- Collection-level permission enforcement (public, authenticated, owner)
+- `Koolbase.db.setUserId()` for authenticated requests
+
 ## 1.2.0
 
 - Added `Koolbase.storage` — file storage SDK
