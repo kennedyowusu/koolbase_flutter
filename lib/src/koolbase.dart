@@ -6,6 +6,8 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'auth/auth_api.dart';
 import 'storage/storage_client.dart';
 import 'database/database_client.dart';
+import 'realtime/realtime_client.dart';
+export 'realtime/realtime_models.dart';
 export 'database/database_models.dart';
 export 'storage/storage_models.dart';
 import 'auth/auth_client.dart';
@@ -57,6 +59,7 @@ class Koolbase {
   static KoolbaseAuthClient? _auth;
   static KoolbaseStorageClient? _storage;
   static KoolbaseDatabaseClient? _database;
+  static KoolbaseRealtimeClient? _realtime;
   static bool _initialized = false;
 
   final KoolbaseConfig _config;
@@ -99,6 +102,12 @@ class Koolbase {
     // Restore auth session from secure storage
     await _auth!.restoreSession();
 
+    // Initialize realtime client
+    _realtime = KoolbaseRealtimeClient(
+      baseUrl: config.baseUrl,
+      publicKey: config.publicKey,
+    );
+
     // Initialize database client
     _database = KoolbaseDatabaseClient(
       baseUrl: config.baseUrl,
@@ -130,6 +139,12 @@ class Koolbase {
   static Koolbase get _client {
     _ensureInitialized();
     return _instance!;
+  }
+
+  /// Access the realtime client
+  static KoolbaseRealtimeClient get realtime {
+    _ensureInitialized();
+    return _realtime!;
   }
 
   /// Access the database client

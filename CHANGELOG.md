@@ -1,3 +1,16 @@
+## 1.4.0
+
+- Added `Koolbase.realtime` — WebSocket realtime SDK
+- `Koolbase.realtime.on(projectId, collection)` — stream of all events
+- `Koolbase.realtime.onRecordCreated(projectId, collection)` — stream of new records
+- `Koolbase.realtime.onRecordUpdated(projectId, collection)` — stream of updated records
+- `Koolbase.realtime.onRecordDeleted(projectId, collection)` — stream of deleted record IDs
+- `Koolbase.realtime.connectionState` — stream of connection status (true/false)
+- `Koolbase.realtime.setToken(token)` — set auth token for subscriptions
+- Auto-reconnect with 3 second backoff
+- Reference-counted subscriptions — safe for multiple listeners
+- Race-condition-free subscription flow
+
 ## 1.3.0
 
 - Added `Koolbase.db` — database SDK
