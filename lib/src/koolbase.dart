@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'auth/auth_api.dart';
+import 'ota/ota_client.dart';
+export 'ota/ota_models.dart';
 import 'storage/storage_client.dart';
 import 'database/database_client.dart';
 import 'realtime/realtime_client.dart';
@@ -60,6 +62,7 @@ class Koolbase {
   static KoolbaseStorageClient? _storage;
   static KoolbaseDatabaseClient? _database;
   static KoolbaseRealtimeClient? _realtime;
+  static KoolbaseOtaClient? _ota;
   static bool _initialized = false;
 
   final KoolbaseConfig _config;
@@ -120,6 +123,12 @@ class Koolbase {
       publicKey: config.publicKey,
     );
 
+    // Initialize OTA client
+    _ota = KoolbaseOtaClient(
+      baseUrl: config.baseUrl,
+      publicKey: config.publicKey,
+    );
+
     // Fetch fresh flags in background
     instance._fetchAndUpdate();
     instance._startPolling();
@@ -157,6 +166,12 @@ class Koolbase {
   static KoolbaseStorageClient get storage {
     _ensureInitialized();
     return _storage!;
+  }
+
+  /// Access the OTA updates client
+  static KoolbaseOtaClient get ota {
+    _ensureInitialized();
+    return _ota!;
   }
 
   /// Access the auth client

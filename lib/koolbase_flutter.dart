@@ -10,4 +10,6 @@ export 'src/database/database_models.dart';
 export 'src/database/database_query.dart';
 export 'src/realtime/realtime_client.dart';
 export 'src/realtime/realtime_models.dart';
+export 'src/ota/ota_client.dart';
+export 'src/ota/ota_models.dart';
 export 'src/storage/storage_models.dart';
