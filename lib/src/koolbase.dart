@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'auth/auth_api.dart';
 import 'ota/ota_client.dart';
+import 'functions/functions_client.dart';
 export 'ota/ota_models.dart';
 import 'storage/storage_client.dart';
 import 'database/database_client.dart';
@@ -41,21 +42,6 @@ class KoolbaseConfig {
 }
 
 /// The main Koolbase SDK client.
-///
-/// Usage:
-/// ```dart
-/// await Koolbase.initialize(const KoolbaseConfig(
-///   publicKey: 'pk_live_xxxx',
-///   baseUrl: 'https://api.koolbase.com',
-/// ));
-///
-/// // Feature flags
-/// if (Koolbase.isEnabled('new_ui')) { ... }
-///
-/// // Auth
-/// await Koolbase.auth.login(email: '...', password: '...');
-/// final user = Koolbase.auth.currentUser;
-/// ```
 class Koolbase {
   static Koolbase? _instance;
   static KoolbaseAuthClient? _auth;
@@ -63,6 +49,7 @@ class Koolbase {
   static KoolbaseDatabaseClient? _database;
   static KoolbaseRealtimeClient? _realtime;
   static KoolbaseOtaClient? _ota;
+  static KoolbaseFunctionsClient? _functions;
   static bool _initialized = false;
 
   final KoolbaseConfig _config;
@@ -123,6 +110,12 @@ class Koolbase {
       publicKey: config.publicKey,
     );
 
+    // Initialize functions client
+    _functions = KoolbaseFunctionsClient(
+      baseUrl: config.baseUrl,
+      publicKey: config.publicKey,
+    );
+
     // Initialize OTA client
     _ota = KoolbaseOtaClient(
       baseUrl: config.baseUrl,
@@ -172,6 +165,12 @@ class Koolbase {
   static KoolbaseOtaClient get ota {
     _ensureInitialized();
     return _ota!;
+  }
+
+  /// Access the functions client
+  static KoolbaseFunctionsClient get functions {
+    _ensureInitialized();
+    return _functions!;
   }
 
   /// Access the auth client
@@ -304,9 +303,11 @@ class Koolbase {
         if (freshPayload.payloadVersion != _payload.payloadVersion) {
           _payload = freshPayload;
           await KoolbaseCache.save(freshPayload);
-          debugPrint('[Koolbase] Payload updated: ${freshPayload.payloadVersion}');
+          debugPrint(
+              '[Koolbase] Payload updated: ${freshPayload.payloadVersion}');
         } else {
-          debugPrint('[Koolbase] Payload unchanged: ${freshPayload.payloadVersion}');
+          debugPrint(
+              '[Koolbase] Payload unchanged: ${freshPayload.payloadVersion}');
         }
       }
     } on SocketException {
