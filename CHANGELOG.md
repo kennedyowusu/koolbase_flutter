@@ -53,3 +53,10 @@
 - Version enforcement with force/soft update policies
 - Offline support with local cache
 - Background polling
+
+## 1.7.0
+
+- **Database:** Added `.populate()` support on query builder for relational data
+  - Fetch related records from other collections in a single query
+  - Usage: `.populate(['author_id:users', 'category_id:categories'])`
+  - Populated records are injected into `data` with the `_id` suffix removed (e.g. `author_id` → `author`)
