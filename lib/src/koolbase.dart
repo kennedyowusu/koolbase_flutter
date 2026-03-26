@@ -9,9 +9,14 @@ import 'functions/functions_client.dart';
 export 'ota/ota_models.dart';
 import 'storage/storage_client.dart';
 import 'database/database_client.dart';
+import 'database/offline/local_database.dart';
+import 'database/offline/cache_store.dart';
+import 'database/offline/write_queue.dart';
+import 'database/sync_engine.dart';
 import 'realtime/realtime_client.dart';
 export 'realtime/realtime_models.dart';
 export 'database/database_models.dart';
+export 'database/database_query.dart' show KoolbaseQuery;
 export 'storage/storage_models.dart';
 import 'auth/auth_client.dart';
 import 'auth/auth_storage.dart';
@@ -50,6 +55,8 @@ class Koolbase {
   static KoolbaseRealtimeClient? _realtime;
   static KoolbaseOtaClient? _ota;
   static KoolbaseFunctionsClient? _functions;
+  static KoolbaseLocalDatabase? _localDb;
+  static SyncEngine? _syncEngine;
   static bool _initialized = false;
 
   final KoolbaseConfig _config;
@@ -98,11 +105,27 @@ class Koolbase {
       publicKey: config.publicKey,
     );
 
-    // Initialize database client
+    // Initialize offline database (Drift)
+    _localDb = KoolbaseLocalDatabase();
+    final cacheStore = CacheStore(_localDb!);
+    final writeQueue = WriteQueue(_localDb!);
+
+    // Initialize database client with offline support
     _database = KoolbaseDatabaseClient(
       baseUrl: config.baseUrl,
       publicKey: config.publicKey,
+      cacheStore: cacheStore,
+      writeQueue: writeQueue,
     );
+
+    // Initialize sync engine — auto-syncs on reconnect
+    _syncEngine = SyncEngine(
+      baseUrl: config.baseUrl,
+      publicKey: config.publicKey,
+      cacheStore: cacheStore,
+      writeQueue: writeQueue,
+    );
+    _syncEngine!.start();
 
     // Initialize storage client
     _storage = KoolbaseStorageClient(

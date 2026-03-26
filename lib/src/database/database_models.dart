@@ -60,11 +60,26 @@ class KoolbaseRecord {
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'project_id': projectId,
+        'collection_id': collectionId,
+        if (createdBy != null) 'created_by': createdBy,
+        'data': data,
+        'created_at': createdAt.toIso8601String(),
+        'updated_at': updatedAt.toIso8601String(),
+      };
 }
 
 class QueryResult {
   final List<KoolbaseRecord> records;
   final int total;
+  final bool isFromCache;
 
-  const QueryResult({required this.records, required this.total});
+  const QueryResult({
+    required this.records,
+    required this.total,
+    this.isFromCache = false,
+  });
 }
