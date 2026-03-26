@@ -93,3 +93,21 @@
   - `QueryResult.isFromCache` flag
   - Write queue with max 3 retries before dropping
   - User-scoped cache — no cross-user data leakage
+
+## 1.8.0
+
+- **Database:** Offline-first support powered by Drift
+  - Cache-first reads — instant UI, background network refresh
+  - Optimistic writes — insert locally, sync when online
+  - Auto-sync on network reconnect via connectivity_plus
+  - Manual `Koolbase.db.syncPendingWrites()` 
+  - `QueryResult.isFromCache` flag
+  - Write queue with max 3 retries before dropping
+  - User-scoped cache — no cross-user data leakage
+
+## 1.9.0
+
+- **Functions:** Added Dart runtime support
+  - New `FunctionRuntime` enum — `FunctionRuntime.deno` and `FunctionRuntime.dart`
+  - New `deploy()` method — deploy functions directly from Flutter
+  - Fixed `invoke()` request body format
