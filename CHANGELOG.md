@@ -60,3 +60,14 @@
   - Fetch related records from other collections in a single query
   - Usage: `.populate(['author_id:users', 'category_id:categories'])`
   - Populated records are injected into `data` with the `_id` suffix removed (e.g. `author_id` → `author`)
+
+## 1.8.0
+
+- **Database:** Offline-first support powered by Drift
+  - Cache-first reads — instant UI, background network refresh
+  - Optimistic writes — insert locally, sync when online
+  - Auto-sync on network reconnect via connectivity_plus
+  - Manual `Koolbase.db.syncPendingWrites()` 
+  - `QueryResult.isFromCache` flag
+  - Write queue with max 3 retries before dropping
+  - User-scoped cache — no cross-user data leakage
