@@ -1,3 +1,31 @@
+## 2.0.0
+
+### Code Push — Runtime Bundle Delivery
+
+- Added `KoolbaseCodePushClient` — full bundle lifecycle management (check, download, verify, cache, activate)
+- Added `BundleCache` — four-slot cache system (pending, ready, active, archive)
+- Added `BundleVerifier` — sha256 checksum verification on every download
+- Added `KoolbaseUpdater` — background check and download on cold launch
+- Added `BundleLoader` — promotes ready bundles to active, handles rollback
+- Added `RuntimeOverrideEngine` — merges bundle config and flags with merge precedence: app defaults → Remote Config → Runtime Bundle
+- `Koolbase.configInt()`, `configString()`, `configDouble()`, `configBool()` — now transparently return bundle values when a bundle is active
+- `Koolbase.isEnabled()` — now checks bundle flag overrides first
+- `KoolbaseConfig` — new `codePushChannel` parameter (default: `'stable'`)
+- `Koolbase.codePush` — new static accessor for the code push client
+
+### Migration from 1.x
+
+Add `codePushChannel` to your `KoolbaseConfig` if you want to subscribe to a specific channel:
+```dart
+await Koolbase.initialize(KoolbaseConfig(
+  publicKey: 'pk_live_xxx',
+  baseUrl: 'https://api.koolbase.com',
+  codePushChannel: 'stable', // new — defaults to 'stable'
+));
+```
+
+No other breaking changes.
+
 ## 1.9.0
 
 - **Functions:** Added Dart runtime support

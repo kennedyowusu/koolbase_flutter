@@ -235,6 +235,13 @@ class Koolbase {
 
   static bool isEnabled(String flagKey) {
     final client = _client;
+
+    // Bundle override wins over remote flags
+    if (_codePush != null && _codePush!.hasActiveBundle) {
+      final bundleValue = _codePush!.override.allFlags[flagKey];
+      if (bundleValue != null) return bundleValue;
+    }
+
     final flag = client._payload.flags[flagKey];
     if (flag == null) return false;
     return RolloutEvaluator.isEnabled(
@@ -249,12 +256,24 @@ class Koolbase {
   // ─── Config Access ─────────────────────────────────────────────────────────
 
   static String configString(String key, {String fallback = ''}) {
+    if (_codePush != null && _codePush!.hasActiveBundle) {
+      final v = _codePush!.override.getConfig(key);
+      if (v != null) return v.toString();
+    }
     final value = _client._payload.config[key];
     if (value == null) return fallback;
     return value.toString();
   }
 
   static int configInt(String key, {int fallback = 0}) {
+    if (_codePush != null && _codePush!.hasActiveBundle) {
+      final v = _codePush!.override.getConfig(key);
+      if (v != null) {
+        if (v is int) return v;
+        if (v is double) return v.toInt();
+        return int.tryParse(v.toString()) ?? fallback;
+      }
+    }
     final value = _client._payload.config[key];
     if (value == null) return fallback;
     if (value is int) return value;
@@ -263,6 +282,14 @@ class Koolbase {
   }
 
   static double configDouble(String key, {double fallback = 0.0}) {
+    if (_codePush != null && _codePush!.hasActiveBundle) {
+      final v = _codePush!.override.getConfig(key);
+      if (v != null) {
+        if (v is double) return v;
+        if (v is int) return v.toDouble();
+        return double.tryParse(v.toString()) ?? fallback;
+      }
+    }
     final value = _client._payload.config[key];
     if (value == null) return fallback;
     if (value is double) return value;
@@ -271,6 +298,13 @@ class Koolbase {
   }
 
   static bool configBool(String key, {bool fallback = false}) {
+    if (_codePush != null && _codePush!.hasActiveBundle) {
+      final v = _codePush!.override.getConfig(key);
+      if (v != null) {
+        if (v is bool) return v;
+        return v.toString() == 'true';
+      }
+    }
     final value = _client._payload.config[key];
     if (value == null) return fallback;
     if (value is bool) return value;
