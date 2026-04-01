@@ -139,7 +139,7 @@ class KoolbaseFunctionsClient {
     Duration timeout = const Duration(seconds: 30),
   }) async {
     if (_authToken == null) {
-      throw FunctionInvokeException(
+      throw const FunctionInvokeException(
           'Auth token required — call Koolbase.auth.login() first');
     }
 

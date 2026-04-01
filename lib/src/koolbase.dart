@@ -4,6 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'auth/auth_api.dart';
+import 'code_push/code_push_client.dart';
+export 'code_push/bundle_model.dart';
+export 'code_push/runtime_override.dart';
 import 'ota/ota_client.dart';
 import 'functions/functions_client.dart';
 export 'ota/ota_models.dart';
@@ -39,10 +42,14 @@ class KoolbaseConfig {
   /// How often the SDK refreshes the bootstrap payload in the background.
   final Duration refreshInterval;
 
+  /// The code push channel to subscribe to (default: stable)
+  final String codePushChannel;
+
   const KoolbaseConfig({
     required this.publicKey,
     required this.baseUrl,
     this.refreshInterval = const Duration(seconds: 60),
+    this.codePushChannel = 'stable',
   });
 }
 
@@ -58,6 +65,7 @@ class Koolbase {
   static KoolbaseLocalDatabase? _localDb;
   static SyncEngine? _syncEngine;
   static bool _initialized = false;
+  static KoolbaseCodePushClient? _codePush;
 
   final KoolbaseConfig _config;
   KoolbasePayload _payload;
@@ -145,6 +153,21 @@ class Koolbase {
       publicKey: config.publicKey,
     );
 
+    // Initialize code push client
+    _codePush = KoolbaseCodePushClient(
+      baseUrl: config.baseUrl,
+      apiKey: config.publicKey,
+      channel: config.codePushChannel,
+    );
+
+    await _codePush!.init(
+      appVersion: appVersion,
+      platform: platform,
+      deviceId: deviceId,
+      remoteConfig: payload.config,
+      remoteFlags: payload.flags.map((k, v) => MapEntry(k, v.enabled)),
+    );
+
     // Fetch fresh flags in background
     instance._fetchAndUpdate();
     instance._startPolling();
@@ -194,6 +217,12 @@ class Koolbase {
   static KoolbaseFunctionsClient get functions {
     _ensureInitialized();
     return _functions!;
+  }
+
+  /// Access the code push client
+  static KoolbaseCodePushClient get codePush {
+    _ensureInitialized();
+    return _codePush!;
   }
 
   /// Access the auth client
