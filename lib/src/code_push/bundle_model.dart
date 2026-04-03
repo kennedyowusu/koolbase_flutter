@@ -37,8 +37,7 @@ class BundleManifest {
       checksum: json['checksum'] as String,
       signature: json['signature'] as String,
       sizeBytes: json['size_bytes'] as int,
-      payload: BundlePayload.fromJson(
-          json['payload'] as Map<String, dynamic>),
+      payload: BundlePayload.fromJson(json['payload'] as Map<String, dynamic>),
     );
   }
 }
@@ -49,11 +48,14 @@ class BundlePayload {
   final Map<String, dynamic> directives;
   final BundleAssets assets;
 
+  final Map<String, String> screens;
+
   const BundlePayload({
     required this.config,
     required this.flags,
     required this.directives,
     required this.assets,
+    this.screens = const {},
   });
 
   factory BundlePayload.fromJson(Map<String, dynamic> json) {
@@ -64,6 +66,8 @@ class BundlePayload {
       directives: (json['directives'] as Map<String, dynamic>?) ?? {},
       assets: BundleAssets.fromJson(
           (json['assets'] as Map<String, dynamic>?) ?? {}),
+      screens: ((json['screens'] as Map<String, dynamic>?) ?? {})
+          .map((k, v) => MapEntry(k, v as String)),
     );
   }
 }

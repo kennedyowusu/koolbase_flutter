@@ -5,6 +5,10 @@ import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'auth/auth_api.dart';
 import 'code_push/code_push_client.dart';
+import 'rfw/rfw_models.dart';
+export 'rfw/dynamic_screen.dart'
+    show KoolbaseDynamicScreen, KoolbaseCodePushScope;
+export 'rfw/rfw_models.dart' show KoolbaseRfwWidget;
 export 'code_push/bundle_model.dart';
 export 'code_push/runtime_override.dart';
 import 'ota/ota_client.dart';
@@ -36,7 +40,6 @@ class KoolbaseConfig {
   /// Your environment public key (e.g. pk_live_xxxx or pk_test_xxxx)
   final String publicKey;
 
-  /// Base URL of your Koolbase API instance
   final String baseUrl;
 
   /// How often the SDK refreshes the bootstrap payload in the background.
@@ -45,11 +48,15 @@ class KoolbaseConfig {
   /// The code push channel to subscribe to (default: stable)
   final String codePushChannel;
 
+  /// Custom rfw widgets to register beyond the defaults
+  final List<KoolbaseRfwWidget> rfwWidgets;
+
   const KoolbaseConfig({
     required this.publicKey,
     required this.baseUrl,
     this.refreshInterval = const Duration(seconds: 60),
     this.codePushChannel = 'stable',
+    this.rfwWidgets = const [],
   });
 }
 

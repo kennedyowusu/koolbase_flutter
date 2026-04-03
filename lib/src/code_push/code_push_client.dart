@@ -1,12 +1,14 @@
 import 'package:flutter/foundation.dart';
 import 'bundle_cache.dart';
+import '../rfw/screen_resolver.dart';
+import '../rfw/rfw_models.dart';
 import 'bundle_loader.dart';
 import 'bundle_model.dart';
 import 'bundle_verifier.dart';
 import 'runtime_override.dart';
 import 'updater.dart';
 
-class KoolbaseCodePushClient {
+class KoolbaseCodePushClient implements KoolbaseScreenClient {
   final String baseUrl;
   final String apiKey;
   final String channel;
@@ -18,6 +20,7 @@ class KoolbaseCodePushClient {
 
   BundleManifest? _activeManifest;
   bool _initialized = false;
+  late final ScreenResolver _screenResolver;
 
   static const _tag = '[KoolbaseCodePush]';
 
@@ -31,7 +34,6 @@ class KoolbaseCodePushClient {
   BundleManifest? get activeManifest => _activeManifest;
   bool get hasActiveBundle => _activeManifest != null;
 
-  /// Called inside Koolbase.initialize() before first frame.
   Future<void> init({
     required String appVersion,
     required String platform,
@@ -42,6 +44,7 @@ class KoolbaseCodePushClient {
     if (_initialized) return;
 
     _cache = await BundleCache.init();
+    _screenResolver = ScreenResolver(cache: _cache);
     _updater = KoolbaseUpdater(
       baseUrl: baseUrl,
       apiKey: apiKey,
@@ -50,11 +53,9 @@ class KoolbaseCodePushClient {
     );
     _loader = BundleLoader(cache: _cache, updater: _updater);
 
-    // Step 1 — load active bundle synchronously
     final currentVersion = await _loader.activeVersion();
     _activeManifest = await _loader.load();
 
-    // Step 2 — apply overrides before first frame
     if (_activeManifest != null) {
       _override.apply(
         manifest: _activeManifest!,
@@ -62,19 +63,24 @@ class KoolbaseCodePushClient {
         remoteFlags: remoteFlags,
       );
       debugPrint('$_tag bundle v${_activeManifest!.version} active');
+      _screenResolver.invalidate();
     } else {
       debugPrint('$_tag no active bundle — using app defaults');
     }
 
     _initialized = true;
 
-    // Step 3 — check for next bundle in background (non-blocking)
     _checkInBackground(
       appVersion: appVersion,
       platform: platform,
       deviceId: deviceId,
       currentBundle: currentVersion,
     );
+  }
+
+  // ignore: annotate_overrides
+  Future<ScreenLookupResult> resolveScreen(String screenId) {
+    return _screenResolver.resolve(screenId, _activeManifest);
   }
 
   void _checkInBackground({
@@ -106,7 +112,6 @@ class KoolbaseCodePushClient {
     });
   }
 
-  /// Register a handler for a directive key.
   void onDirective(String key, void Function(dynamic value) handler) {
     _override.registerDirectiveHandler(key, handler);
   }
