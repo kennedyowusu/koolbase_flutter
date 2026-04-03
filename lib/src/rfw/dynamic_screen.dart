@@ -45,6 +45,12 @@ class _KoolbaseDynamicScreenState extends State<KoolbaseDynamicScreen> {
   void initState() {
     super.initState();
     _initRuntime();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_loading) return;
     _resolveScreen();
   }
 
