@@ -1,3 +1,35 @@
+## 2.1.0
+
+### Layer 2 — Server-Driven UI via rfw
+
+- Added `KoolbaseDynamicScreen` — drop-in widget that renders server-defined UI from the active bundle
+- Added `KoolbaseCodePushScope` — InheritedWidget that wires the code push client into the widget tree
+- Added `KoolbaseRfwWidget` — registration type for custom widgets in the rfw runtime
+- Added default widget library: Column, Row, Stack, Container, Padding, SizedBox, Expanded, Center, Text, ElevatedButton, TextButton, OutlinedButton, Card, Divider, CircularProgressIndicator, KoolbaseText, KoolbaseButton, KoolbaseSpacer, KoolbaseBadge
+- Added `ScreenResolver` — extracts and caches rfw binaries from the active bundle zip
+- Bundle payload now supports `screens` field — map of screenId to .rfw filename
+- `KoolbaseDynamicScreen` guarantees: never crash, never block, never surprise — all failures fall back to the local widget
+- Fixed: `KoolbaseCodePushScope.of(context)` moved to `didChangeDependencies` to avoid initState context restrictions
+
+### Usage
+```dart
+// Wrap your app with KoolbaseCodePushScope
+KoolbaseCodePushScope(
+  client: Koolbase.codePush,
+  child: MyApp(),
+)
+
+// Drop KoolbaseDynamicScreen anywhere
+KoolbaseDynamicScreen(
+  screenId: 'onboarding',
+  data: {'username': user.name},
+  onEvent: (name, args) {
+    if (name == 'get_started') Navigator.pushNamed(context, '/home');
+  },
+  fallback: const OnboardingScreen(),
+)
+```
+
 ## 2.0.0
 
 ### Code Push — Runtime Bundle Delivery
