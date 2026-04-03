@@ -5,10 +5,12 @@ import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'auth/auth_api.dart';
 import 'code_push/code_push_client.dart';
+import 'code_push/flow_models.dart';
 import 'rfw/rfw_models.dart';
 export 'rfw/dynamic_screen.dart'
     show KoolbaseDynamicScreen, KoolbaseCodePushScope;
 export 'rfw/rfw_models.dart' show KoolbaseRfwWidget;
+export 'code_push/flow_models.dart' show FlowResult;
 export 'code_push/bundle_model.dart';
 export 'code_push/runtime_override.dart';
 import 'ota/ota_client.dart';
@@ -227,6 +229,18 @@ class Koolbase {
   }
 
   /// Access the code push client
+  /// Execute a named flow from the active bundle.
+  static FlowResult executeFlow({
+    required String flowId,
+    Map<String, dynamic>? context,
+  }) {
+    _ensureInitialized();
+    return _codePush!.executeFlow(
+      flowId: flowId,
+      context: context,
+    );
+  }
+
   static KoolbaseCodePushClient get codePush {
     _ensureInitialized();
     return _codePush!;

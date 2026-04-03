@@ -47,8 +47,10 @@ class BundlePayload {
   final Map<String, bool> flags;
   final Map<String, dynamic> directives;
   final BundleAssets assets;
-
   final Map<String, String> screens;
+
+  /// Event-driven logic flows — Map<flowId, flow node tree>
+  final Map<String, dynamic> flows;
 
   const BundlePayload({
     required this.config,
@@ -56,6 +58,7 @@ class BundlePayload {
     required this.directives,
     required this.assets,
     this.screens = const {},
+    this.flows = const {},
   });
 
   factory BundlePayload.fromJson(Map<String, dynamic> json) {
@@ -68,6 +71,7 @@ class BundlePayload {
           (json['assets'] as Map<String, dynamic>?) ?? {}),
       screens: ((json['screens'] as Map<String, dynamic>?) ?? {})
           .map((k, v) => MapEntry(k, v as String)),
+      flows: (json['flows'] as Map<String, dynamic>?) ?? {},
     );
   }
 }

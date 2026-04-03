@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'bundle_cache.dart';
+import 'flow_executor.dart';
+import 'flow_models.dart';
 import '../rfw/screen_resolver.dart';
 import '../rfw/rfw_models.dart';
 import 'bundle_loader.dart';
@@ -78,6 +80,8 @@ class KoolbaseCodePushClient implements KoolbaseScreenClient {
     );
   }
 
+  final FlowExecutor _flowExecutor = FlowExecutor();
+
   // ignore: annotate_overrides
   Future<ScreenLookupResult> resolveScreen(String screenId) {
     return _screenResolver.resolve(screenId, _activeManifest);
@@ -110,6 +114,26 @@ class KoolbaseCodePushClient implements KoolbaseScreenClient {
           break;
       }
     });
+  }
+
+  // ignore: annotate_overrides
+  FlowResult executeFlow({
+    required String flowId,
+    Map<String, dynamic>? context,
+  }) {
+    if (_activeManifest == null) {
+      return FlowResult.noEvent();
+    }
+    final ctx = FlowContext(
+      context: context,
+      config: _activeManifest!.payload.config,
+      flags: _activeManifest!.payload.flags,
+    );
+    return _flowExecutor.execute(
+      flowId: flowId,
+      flows: _activeManifest!.payload.flows,
+      ctx: ctx,
+    );
   }
 
   void onDirective(String key, void Function(dynamic value) handler) {

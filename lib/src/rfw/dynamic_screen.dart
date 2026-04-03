@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:rfw/rfw.dart';
 import 'koolbase_widget_library.dart';
 import 'rfw_models.dart';
+import '../code_push/flow_models.dart';
 
 class KoolbaseDynamicScreen extends StatefulWidget {
   final String screenId;
@@ -113,6 +114,40 @@ class _KoolbaseDynamicScreenState extends State<KoolbaseDynamicScreen> {
     }
   }
 
+  void _handleEvent(String name, DynamicMap args) {
+    final scope = KoolbaseCodePushScope.of(context);
+    FlowResult? flowResult;
+
+    if (scope != null) {
+      try {
+        flowResult = scope.executeFlow(
+          flowId: name,
+          context: Map<String, dynamic>.from(widget.data),
+        );
+      } catch (e) {
+        debugPrint('[KoolbaseDynamicScreen] flow error [$name]: $e');
+      }
+    }
+
+    // If flow emitted a new event, pass that up instead
+    final eventToEmit = (flowResult != null && flowResult.hasEvent)
+        ? flowResult.eventName!
+        : name;
+    final argsToEmit = (flowResult != null && flowResult.hasEvent)
+        ? flowResult.args
+        : Map<String, dynamic>.from(args);
+
+    if (widget.onEvent != null) {
+      try {
+        widget.onEvent!(eventToEmit, argsToEmit);
+      } catch (e) {
+        debugPrint(
+          '[KoolbaseDynamicScreen] onEvent error [$eventToEmit]: $e',
+        );
+      }
+    }
+  }
+
   void _setFallback(String reason) {
     debugPrint(
         '[KoolbaseDynamicScreen] fallback for ${widget.screenId}: $reason');
@@ -141,18 +176,10 @@ class _KoolbaseDynamicScreenState extends State<KoolbaseDynamicScreen> {
         runtime: _runtime,
         widget: _rootWidget,
         data: DynamicContent(widget.data),
-        // FIX 5: correct event signature
-        onEvent: widget.onEvent != null
-            ? (String name, DynamicMap args) {
-                try {
-                  widget.onEvent!(name, args);
-                } catch (e) {
-                  debugPrint(
-                    '[KoolbaseDynamicScreen] onEvent error [$name]: $e',
-                  );
-                }
-              }
-            : null,
+        // correct event signature — auto-execute flow if defined
+        onEvent: (String name, DynamicMap args) {
+          _handleEvent(name, args);
+        },
       ),
     );
   }

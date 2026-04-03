@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../code_push/flow_models.dart';
 
 class KoolbaseRfwWidget {
   final String name;
@@ -47,4 +48,5 @@ class ScreenLookupResult {
 
 abstract class KoolbaseScreenClient {
   Future<ScreenLookupResult> resolveScreen(String screenId);
+  FlowResult executeFlow({required String flowId, Map<String, dynamic>? context});
 }
