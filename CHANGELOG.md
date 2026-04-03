@@ -1,3 +1,46 @@
+## 2.2.0
+
+### Logic Engine v1 — Event-Driven Flows
+
+- Added `FlowExecutor` — safe, deterministic runtime for evaluating flow node trees
+- Added `FlowContext` — resolves data from context, config, and flags with dot-notation support
+- Added `FlowResult` — typed result with event name, args, and error state
+- Supported node types: `if`, `sequence`, `event` (terminal), `set`
+- Supported operators: `eq`, `neq`, `gt`, `lt`, `and`, `or`, `exists`
+- Supported data sources: `context` (app-provided), `config` (bundle), `flags` (bundle)
+- `BundlePayload` extended with `flows` field — `Map<String, dynamic>` defaulting to `{}`
+- `KoolbaseDynamicScreen` now auto-executes flows on rfw events — if a flow emits a new event, that event is passed to `onEvent` instead
+- `Koolbase.executeFlow()` — top-level static accessor
+- `KoolbaseCodePushClient.executeFlow()` — direct client access
+- `KoolbaseScreenClient` abstract interface extended with `executeFlow()`
+
+### Usage
+```dart
+// In your bundle's flows.json
+{
+  "on_checkout_tap": {
+    "type": "if",
+    "condition": {
+      "op": "eq",
+      "left": { "from": "context.plan" },
+      "right": "free"
+    },
+    "then": { "type": "event", "name": "show_upgrade" },
+    "else": { "type": "event", "name": "go_checkout" }
+  }
+}
+
+// In your app — flows execute automatically from KoolbaseDynamicScreen events
+// Or call directly:
+final result = Koolbase.executeFlow(
+  flowId: 'on_checkout_tap',
+  context: { 'plan': user.plan },
+);
+if (result.hasEvent) {
+  Navigator.pushNamed(context, result.eventName!);
+}
+```
+
 ## 2.1.0
 
 ### Layer 2 — Server-Driven UI via rfw
