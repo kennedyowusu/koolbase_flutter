@@ -1,3 +1,43 @@
+## 2.3.0
+
+### Koolbase Analytics
+
+- Added `KoolbaseAnalyticsClient` — event tracking with batched flush
+- Added `Koolbase.analytics` — top-level static accessor
+- Added `Koolbase.analytics.track(eventName, properties)` — custom event tracking
+- Added `Koolbase.analytics.screenView(screenName)` — screen view tracking
+- Added `Koolbase.analytics.setUserProperty(key, value)` — user property management
+- Added `Koolbase.analytics.identify(userId)` — attach authenticated user to events
+- Added `Koolbase.analytics.reset()` — clear user identity on logout
+- Added `KoolbaseNavigatorObserver` — auto screen tracking via Flutter navigator
+- Auto events: `app_open`, `screen_view`, `session_end`
+- Batch flush: every 30 seconds, on background, on close, or when 20 events queued
+- Events retry on network failure — re-queued up to batch size limit
+- `KoolbaseConfig` extended with `analyticsEnabled` parameter (default: true)
+
+### Usage
+```dart
+// Auto screen tracking
+MaterialApp(
+  navigatorObservers: [
+    KoolbaseNavigatorObserver(client: Koolbase.analytics),
+  ],
+)
+
+// Manual tracking
+Koolbase.analytics.track('purchase', properties: {
+  'value': 1200,
+  'currency': 'GHS',
+});
+
+// User identity
+Koolbase.analytics.identify(user.id);
+Koolbase.analytics.setUserProperty('plan', 'pro');
+
+// Flush on app background
+Koolbase.analytics.flush();
+```
+
 ## 2.2.0
 
 ### Logic Engine v1 — Event-Driven Flows
