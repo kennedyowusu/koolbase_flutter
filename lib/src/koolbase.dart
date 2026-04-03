@@ -5,6 +5,8 @@ import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'auth/auth_api.dart';
 import 'code_push/code_push_client.dart';
+import 'analytics/analytics_client.dart';
+export 'analytics/analytics_client.dart' show KoolbaseNavigatorObserver;
 import 'code_push/flow_models.dart';
 import 'rfw/rfw_models.dart';
 export 'rfw/dynamic_screen.dart'
@@ -53,12 +55,16 @@ class KoolbaseConfig {
   /// Custom rfw widgets to register beyond the defaults
   final List<KoolbaseRfwWidget> rfwWidgets;
 
+  /// Whether to enable analytics (default: true)
+  final bool analyticsEnabled;
+
   const KoolbaseConfig({
     required this.publicKey,
     required this.baseUrl,
     this.refreshInterval = const Duration(seconds: 60),
     this.codePushChannel = 'stable',
     this.rfwWidgets = const [],
+    this.analyticsEnabled = true,
   });
 }
 
@@ -75,6 +81,7 @@ class Koolbase {
   static SyncEngine? _syncEngine;
   static bool _initialized = false;
   static KoolbaseCodePushClient? _codePush;
+  static KoolbaseAnalyticsClient? _analytics;
 
   final KoolbaseConfig _config;
   KoolbasePayload _payload;
@@ -181,6 +188,15 @@ class Koolbase {
     instance._fetchAndUpdate();
     instance._startPolling();
 
+    // Initialize analytics
+    if (config.analyticsEnabled) {
+      _analytics = KoolbaseAnalyticsClient(
+        baseUrl: config.baseUrl,
+        apiKey: config.publicKey,
+      );
+      await _analytics!.init();
+    }
+
     _initialized = true;
   }
 
@@ -239,6 +255,11 @@ class Koolbase {
       flowId: flowId,
       context: context,
     );
+  }
+
+  static KoolbaseAnalyticsClient get analytics {
+    _ensureInitialized();
+    return _analytics!;
   }
 
   static KoolbaseCodePushClient get codePush {
