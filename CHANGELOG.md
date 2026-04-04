@@ -1,3 +1,7 @@
+## 2.3.1
+
+- Updated README — added Code Push, Analytics, Logic Engine sections, comparison table, clearer get started guide
+
 ## 2.3.0
 
 ### Koolbase Analytics
