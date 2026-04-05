@@ -6,6 +6,8 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'auth/auth_api.dart';
 import 'code_push/code_push_client.dart';
 import 'analytics/analytics_client.dart';
+import 'messaging/messaging_client.dart';
+export 'messaging/messaging_client.dart' show KoolbaseMessaging, KoolbaseMessage;
 export 'analytics/analytics_client.dart' show KoolbaseNavigatorObserver;
 import 'code_push/flow_models.dart';
 import 'rfw/rfw_models.dart';
@@ -58,6 +60,9 @@ class KoolbaseConfig {
   /// Whether to enable analytics (default: true)
   final bool analyticsEnabled;
 
+  /// Whether to enable cloud messaging (default: true)
+  final bool messagingEnabled;
+
   const KoolbaseConfig({
     required this.publicKey,
     required this.baseUrl,
@@ -65,6 +70,7 @@ class KoolbaseConfig {
     this.codePushChannel = 'stable',
     this.rfwWidgets = const [],
     this.analyticsEnabled = true,
+    this.messagingEnabled = true,
   });
 }
 
@@ -82,6 +88,7 @@ class Koolbase {
   static bool _initialized = false;
   static KoolbaseCodePushClient? _codePush;
   static KoolbaseAnalyticsClient? _analytics;
+  static KoolbaseMessaging? _messaging;
 
   final KoolbaseConfig _config;
   KoolbasePayload _payload;
@@ -197,6 +204,15 @@ class Koolbase {
       await _analytics!.init();
     }
 
+    // Initialize messaging
+    if (config.messagingEnabled) {
+      _messaging = KoolbaseMessaging(
+        baseUrl: config.baseUrl,
+        apiKey: config.publicKey,
+      );
+      _messaging!.setDeviceId(await DeviceIdManager.getOrCreate());
+    }
+
     _initialized = true;
   }
 
@@ -260,6 +276,11 @@ class Koolbase {
   static KoolbaseAnalyticsClient get analytics {
     _ensureInitialized();
     return _analytics!;
+  }
+
+  static KoolbaseMessaging get messaging {
+    _ensureInitialized();
+    return _messaging!;
   }
 
   static KoolbaseCodePushClient get codePush {
