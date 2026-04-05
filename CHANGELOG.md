@@ -1,3 +1,34 @@
+## 2.4.0
+
+### Koolbase Cloud Messaging
+
+- Added `KoolbaseMessaging` — push notification delivery via FCM
+- Added `Koolbase.messaging.registerToken(token, platform)` — register FCM device token with Koolbase
+- Added `Koolbase.messaging.send(to, title, body, data)` — send push notification to a specific device
+- `KoolbaseConfig` extended with `messagingEnabled` parameter (default: true)
+- Device ID automatically attached to token registration
+
+### Usage
+```dart
+// After obtaining FCM token from firebase_messaging
+final fcmToken = await FirebaseMessaging.instance.getToken();
+await Koolbase.messaging.registerToken(
+  token: fcmToken!,
+  platform: 'android', // or 'ios'
+);
+
+// Send to a specific device
+await Koolbase.messaging.send(
+  to: deviceToken,
+  title: 'Your order is ready',
+  body: 'Pick up at counter 3',
+  data: {'order_id': '123'},
+);
+```
+
+### Setup required
+Add your FCM server key as a project secret named `FCM_SERVER_KEY` in the Koolbase dashboard.
+
 ## 2.3.1
 
 - Updated README — added Code Push, Analytics, Logic Engine sections, comparison table, clearer get started guide
