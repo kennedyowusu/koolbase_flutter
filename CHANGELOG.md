@@ -1,3 +1,34 @@
+## 2.6.0
+
+### Logic Engine v2 — Richer conditions
+
+New operators:
+- `gte` — greater than or equals
+- `lte` — less than or equals
+- `contains` — string or list contains value
+- `starts_with` — string starts with
+- `ends_with` — string ends with
+- `in_list` — value is in a list
+- `not_in_list` — value is not in a list
+- `between` — numeric value in range [min, max]
+- `is_true` — value is boolean true
+- `is_false` — value is boolean false
+- `not_exists` — value is null or missing
+
+All operators work with AND/OR condition groups.
+
+### Example
+
+```json
+{
+  "op": "and",
+  "conditions": [
+    { "op": "gte", "left": { "from": "context.usage" }, "right": 5 },
+    { "op": "in_list", "left": { "from": "context.plan" }, "right": ["free", "trial"] }
+  ]
+}
+```
+
 ## 2.5.1
 
 - README update — added Sign in with Apple section

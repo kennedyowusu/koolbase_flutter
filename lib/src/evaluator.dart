@@ -1,18 +1,6 @@
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
 
-/// Evaluates feature flags locally using deterministic bucketing.
-///
-/// The server sends rollout rules. The SDK computes decisions locally.
-/// This keeps the bootstrap response identical for all devices — enabling
-/// CDN-level caching while still supporting gradual rollouts.
-///
-/// Bucketing formula: stableHash(deviceId + ":" + flagKey) % 100
-///
-/// Using a composite key (deviceId + flagKey) ensures:
-/// - Same device lands in different buckets for different flags
-/// - Prevents all 25% rollouts from affecting exactly the same users
-/// - Still fully deterministic and offline-safe
 class RolloutEvaluator {
   /// Returns true if the flag is enabled for the given device.
   static bool isEnabled({

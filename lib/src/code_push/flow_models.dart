@@ -4,7 +4,17 @@ enum FlowNodeType { ifNode, sequence, event, set }
 
 // ─── Operators ───────────────────────────────────────────────────────────────
 
-enum FlowOperator { eq, neq, gt, lt, and, or, exists }
+enum FlowOperator {
+  eq, neq,
+  gt, gte,
+  lt, lte,
+  and, or,
+  exists, notExists,
+  contains, startsWith, endsWith,
+  inList, notInList,
+  between,
+  isTrue, isFalse,
+}
 
 // ─── Data Source ─────────────────────────────────────────────────────────────
 
@@ -70,14 +80,25 @@ class FlowCondition {
 
   static FlowOperator _parseOp(String op) {
     return switch (op) {
-      'eq' => FlowOperator.eq,
-      'neq' => FlowOperator.neq,
-      'gt' => FlowOperator.gt,
-      'lt' => FlowOperator.lt,
-      'and' => FlowOperator.and,
-      'or' => FlowOperator.or,
-      'exists' => FlowOperator.exists,
-      _ => FlowOperator.eq,
+      'eq'          => FlowOperator.eq,
+      'neq'         => FlowOperator.neq,
+      'gt'          => FlowOperator.gt,
+      'gte'         => FlowOperator.gte,
+      'lt'          => FlowOperator.lt,
+      'lte'         => FlowOperator.lte,
+      'and'         => FlowOperator.and,
+      'or'          => FlowOperator.or,
+      'exists'      => FlowOperator.exists,
+      'not_exists'  => FlowOperator.notExists,
+      'contains'    => FlowOperator.contains,
+      'starts_with' => FlowOperator.startsWith,
+      'ends_with'   => FlowOperator.endsWith,
+      'in_list'     => FlowOperator.inList,
+      'not_in_list' => FlowOperator.notInList,
+      'between'     => FlowOperator.between,
+      'is_true'     => FlowOperator.isTrue,
+      'is_false'    => FlowOperator.isFalse,
+      _             => FlowOperator.eq,
     };
   }
 }

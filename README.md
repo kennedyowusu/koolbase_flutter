@@ -11,11 +11,11 @@ Auth, database, storage, realtime, functions, feature flags, remote config, vers
 
 ## Get started in 2 minutes
 
-**1. Create a free account at [app.koolbase.com](https://app.koolbase.com)**
+1. Create a free account at [app.koolbase.com](https://app.koolbase.com)
 
-**2. Create a project and copy your public key from Environments**
+2. Create a project and copy your public key from Environments
 
-**3. Add the SDK:**
+3. Add the SDK
 
 ```yaml
 dependencies:

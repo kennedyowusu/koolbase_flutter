@@ -137,13 +137,24 @@ class FlowExecutor {
 
   bool _evalCondition(FlowCondition condition, FlowContext ctx) {
     return switch (condition.op) {
-      FlowOperator.eq => _evalEq(condition, ctx),
-      FlowOperator.neq => !_evalEq(condition, ctx),
-      FlowOperator.gt => _evalGt(condition, ctx),
-      FlowOperator.lt => _evalLt(condition, ctx),
-      FlowOperator.and => _evalAnd(condition, ctx),
-      FlowOperator.or => _evalOr(condition, ctx),
-      FlowOperator.exists => _evalExists(condition, ctx),
+      FlowOperator.eq        => _evalEq(condition, ctx),
+      FlowOperator.neq       => !_evalEq(condition, ctx),
+      FlowOperator.gt        => _evalGt(condition, ctx),
+      FlowOperator.lt        => _evalLt(condition, ctx),
+      FlowOperator.gte       => _evalGte(condition, ctx),
+      FlowOperator.lte       => _evalLte(condition, ctx),
+      FlowOperator.and       => _evalAnd(condition, ctx),
+      FlowOperator.or        => _evalOr(condition, ctx),
+      FlowOperator.exists    => _evalExists(condition, ctx),
+      FlowOperator.notExists => !_evalExists(condition, ctx),
+      FlowOperator.contains  => _evalContains(condition, ctx),
+      FlowOperator.startsWith => _evalStartsWith(condition, ctx),
+      FlowOperator.endsWith  => _evalEndsWith(condition, ctx),
+      FlowOperator.inList    => _evalInList(condition, ctx),
+      FlowOperator.notInList => !_evalInList(condition, ctx),
+      FlowOperator.between   => _evalBetween(condition, ctx),
+      FlowOperator.isTrue    => _evalIsTrue(condition, ctx),
+      FlowOperator.isFalse   => !_evalIsTrue(condition, ctx),
     };
   }
 
@@ -180,6 +191,66 @@ class FlowExecutor {
     if (c.value == null) return false;
     final val = ctx.resolve(c.value!);
     return val != null;
+  }
+
+  bool _evalGte(FlowCondition c, FlowContext ctx) {
+    final left = _toNum(c.left != null ? ctx.resolve(c.left!) : null);
+    final right = _toNum(c.right);
+    if (left == null || right == null) return false;
+    return left >= right;
+  }
+
+  bool _evalLte(FlowCondition c, FlowContext ctx) {
+    final left = _toNum(c.left != null ? ctx.resolve(c.left!) : null);
+    final right = _toNum(c.right);
+    if (left == null || right == null) return false;
+    return left <= right;
+  }
+
+  bool _evalContains(FlowCondition c, FlowContext ctx) {
+    final left = c.left != null ? ctx.resolve(c.left!) : null;
+    final right = c.right?.toString() ?? '';
+    if (left is String) return left.contains(right);
+    if (left is List) return left.contains(c.right);
+    return false;
+  }
+
+  bool _evalStartsWith(FlowCondition c, FlowContext ctx) {
+    final left = c.left != null ? ctx.resolve(c.left!) : null;
+    final right = c.right?.toString() ?? '';
+    if (left is String) return left.startsWith(right);
+    return false;
+  }
+
+  bool _evalEndsWith(FlowCondition c, FlowContext ctx) {
+    final left = c.left != null ? ctx.resolve(c.left!) : null;
+    final right = c.right?.toString() ?? '';
+    if (left is String) return left.endsWith(right);
+    return false;
+  }
+
+  bool _evalInList(FlowCondition c, FlowContext ctx) {
+    final left = c.left != null ? ctx.resolve(c.left!) : null;
+    final list = c.right;
+    if (list is! List) return false;
+    return list.any((item) => item?.toString() == left?.toString());
+  }
+
+  bool _evalBetween(FlowCondition c, FlowContext ctx) {
+    final left = _toNum(c.left != null ? ctx.resolve(c.left!) : null);
+    final range = c.right;
+    if (left == null || range is! List || range.length < 2) return false;
+    final min = _toNum(range[0]);
+    final max = _toNum(range[1]);
+    if (min == null || max == null) return false;
+    return left >= min && left <= max;
+  }
+
+  bool _evalIsTrue(FlowCondition c, FlowContext ctx) {
+    final left = c.left != null ? ctx.resolve(c.left!) : null;
+    if (left is bool) return left;
+    if (left is String) return left == 'true';
+    return false;
   }
 
   num? _toNum(dynamic value) {
