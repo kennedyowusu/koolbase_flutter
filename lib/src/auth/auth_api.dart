@@ -81,8 +81,7 @@ class AuthApi {
         )
         .timeout(const Duration(seconds: 10));
     _checkError(res);
-    return KoolbaseUser.fromJson(
-        jsonDecode(res.body) as Map<String, dynamic>);
+    return KoolbaseUser.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
   }
 
   Future<KoolbaseUser> updateProfile({
@@ -101,8 +100,7 @@ class AuthApi {
         )
         .timeout(const Duration(seconds: 10));
     _checkError(res);
-    return KoolbaseUser.fromJson(
-        jsonDecode(res.body) as Map<String, dynamic>);
+    return KoolbaseUser.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
   }
 
   Future<void> forgotPassword(String email) async {
@@ -145,8 +143,7 @@ class AuthApi {
     if (res.statusCode == 401) throw const InvalidCredentialsException();
     if (res.statusCode == 403) throw const UserDisabledException();
     _checkError(res);
-    return AuthSession.fromJson(
-        jsonDecode(res.body) as Map<String, dynamic>);
+    return AuthSession.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
   }
 
   void _checkError(http.Response res) {
@@ -158,5 +155,31 @@ class AuthApi {
     throw KoolbaseAuthException(
       body['error'] as String? ?? 'An unexpected error occurred',
     );
+  }
+
+  Future<Map<String, dynamic>> oauthLogin({
+    required String provider,
+    required String token,
+    String email = '',
+    String name = '',
+    String avatarUrl = '',
+  }) async {
+    final response = await http
+        .post(
+          Uri.parse('$baseUrl/v1/auth/oauth'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'provider': provider,
+            'token': token,
+            'email': email,
+            'name': name,
+            'avatar_url': avatarUrl,
+          }),
+        )
+        .timeout(const Duration(seconds: 10));
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    throw Exception('OAuth login failed: \${response.statusCode}');
   }
 }

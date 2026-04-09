@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'package:flutter/material.dart';
+
 import 'auth_api.dart';
 import 'auth_models.dart';
 import 'auth_storage.dart';
@@ -128,8 +130,8 @@ class KoolbaseAuthClient {
     // Check if access token exists and is not expired
     if (_accessToken != null &&
         _accessTokenExpiresAt != null &&
-        DateTime.now()
-            .isBefore(_accessTokenExpiresAt!.subtract(const Duration(minutes: 1)))) {
+        DateTime.now().isBefore(
+            _accessTokenExpiresAt!.subtract(const Duration(minutes: 1)))) {
       return _accessToken!;
     }
 
@@ -165,5 +167,30 @@ class KoolbaseAuthClient {
 
   void dispose() {
     _authStateController.close();
+  }
+
+  /// Sign in with an OAuth provider (Google, GitHub, Apple)
+  Future<Map<String, dynamic>?> oauthLogin({
+    required String provider,
+    required String token,
+    String email = '',
+    String name = '',
+    String avatarUrl = '',
+  }) async {
+    try {
+      final data = await _api.oauthLogin(
+        provider: provider,
+        token: token,
+        email: email,
+        name: name,
+        avatarUrl: avatarUrl,
+      );
+      _accessToken = data['access_token'];
+      _currentUser = data['user'];
+      return data;
+    } catch (e) {
+      debugPrint('[KoolbaseAuth] oauthLogin error: $e');
+      return null;
+    }
   }
 }

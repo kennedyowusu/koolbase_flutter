@@ -1,3 +1,27 @@
+## 2.5.0
+
+### Sign in with Apple
+
+- Added `KoolbaseAppleAuth.signIn()` — Sign in with Apple for Flutter
+- Added `KoolbaseAuthClient.oauthLogin()` — unified OAuth login method
+- Added `AuthApi.oauthLogin()` — server-side Apple identity token verification
+- Apple identity token verified server-side using Apple's JWKS endpoint
+- Supports email relay addresses from Apple private email relay
+
+### Usage
+
+```dart
+import 'package:koolbase_flutter/koolbase_flutter.dart';
+
+final session = await KoolbaseAppleAuth.signIn();
+if (session != null) {
+  print('Signed in: \${session['user']['email']}');
+}
+```
+
+### Setup required
+Add `sign_in_with_apple` to your pubspec.yaml and configure your App ID in the Apple Developer portal.
+
 ## 2.4.0
 
 ### Koolbase Cloud Messaging
