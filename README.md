@@ -330,6 +330,21 @@ Koolbase.analytics.reset();
 
 ---
 
+## Sign in with Apple
+
+```dart
+import 'package:koolbase_flutter/koolbase_flutter.dart';
+
+final session = await KoolbaseAppleAuth.signIn();
+if (session != null) {
+  print('Signed in: ${session['user']['email']}');
+}
+```
+
+Add `sign_in_with_apple` to your pubspec.yaml. Full setup guide at [docs.koolbase.com/auth/oauth](https://docs.koolbase.com/auth/oauth).
+
+---
+
 ## Documentation
 
 Full documentation at [docs.koolbase.com](https://docs.koolbase.com)
