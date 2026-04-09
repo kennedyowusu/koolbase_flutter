@@ -330,6 +330,31 @@ Koolbase.analytics.reset();
 
 ---
 
+## Logic Engine v2
+
+```dart
+final result = Koolbase.executeFlow(
+  'on_checkout_tap',
+  context: {
+    'plan': user.plan,
+    'usage': user.usage,
+  },
+);
+
+if (result.hasEvent) {
+  switch (result.eventName) {
+    case 'show_upgrade': navigator.pushNamed('/upgrade');
+    case 'go_checkout': navigator.pushNamed('/checkout');
+  }
+}
+```
+
+**v2 operators:** `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `contains`, `starts_with`, `ends_with`, `in_list`, `not_in_list`, `between`, `is_true`, `is_false`, `exists`, `not_exists`, `and`, `or`
+
+Full docs at [docs.koolbase.com/sdk/logic-engine](https://docs.koolbase.com/sdk/logic-engine).
+
+---
+
 ## Sign in with Apple
 
 ```dart
