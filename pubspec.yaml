@@ -21,8 +21,8 @@ dependencies:
   crypto: ^3.0.3
   uuid: ^4.4.0
   web_socket_channel: ^3.0.3
-  drift: ^2.18.0
-  drift_flutter: ^0.2.0
+  drift: ^2.31.0
+  drift_flutter: ^0.3.0
   connectivity_plus: ^7.1.0
   rfw: ^1.0.32
 
