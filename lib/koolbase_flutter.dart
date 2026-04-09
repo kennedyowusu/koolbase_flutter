@@ -1,4 +1,3 @@
-library koolbase_flutter;
 
 export 'src/koolbase.dart';
 export 'src/auth/auth_models.dart';

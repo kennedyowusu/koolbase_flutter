@@ -49,7 +49,7 @@ class BundlePayload {
   final BundleAssets assets;
   final Map<String, String> screens;
 
-  /// Event-driven logic flows — Map<flowId, flow node tree>
+  /// Event-driven logic flows — Map of flowId to flow node tree
   final Map<String, dynamic> flows;
 
   const BundlePayload({

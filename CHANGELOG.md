@@ -1,3 +1,9 @@
+## 2.6.2
+
+- Updated dependencies to latest versions
+- Fixed static analysis warnings
+- Removed deprecated encryptedSharedPreferences parameter
+
 ## 2.6.1
 
 - README update — Logic Engine v2 operators

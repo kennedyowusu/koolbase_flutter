@@ -8,7 +8,7 @@ class AuthStorage {
   AuthStorage({FlutterSecureStorage? storage})
       : _storage = storage ??
             const FlutterSecureStorage(
-              aOptions: AndroidOptions(encryptedSharedPreferences: true),
+              aOptions: AndroidOptions(),
             );
 
   Future<void> saveRefreshToken(String token) async {
