@@ -1,3 +1,8 @@
+## 2.6.3
+
+- Updated drift to ^2.31.0
+- Updated drift_flutter to ^0.2.8
+
 ## 2.6.2
 
 - Updated dependencies to latest versions
