@@ -1,3 +1,7 @@
+## 2.5.1
+
+- README update — added Sign in with Apple section
+
 ## 2.5.0
 
 ### Sign in with Apple
