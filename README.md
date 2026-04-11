@@ -5,7 +5,7 @@
 
 Flutter SDK for [Koolbase](https://koolbase.com) — Backend as a Service built for mobile developers.
 
-Auth, database, storage, realtime, functions, feature flags, remote config, version enforcement, OTA updates, code push, server-driven UI, logic engine, and analytics — one SDK, one `initialize()` call.
+Auth, database, storage, realtime, functions, feature flags, remote config, version enforcement, OTA updates, code push, server-driven UI, logic engine, analytics, and cloud messaging — one SDK, one `initialize()` call.
 
 ---
 
@@ -19,7 +19,7 @@ Auth, database, storage, realtime, functions, feature flags, remote config, vers
 
 ```yaml
 dependencies:
-  koolbase_flutter: ^2.3.0
+  koolbase_flutter: ^2.6.3
 ```
 
 **4. Initialize before `runApp()`:**
@@ -58,6 +58,9 @@ await Koolbase.auth.logout();
 
 // Google OAuth
 await Koolbase.auth.signInWithGoogle(idToken: googleIdToken);
+
+// Sign in with Apple
+final session = await KoolbaseAppleAuth.signIn();
 
 // Password reset
 await Koolbase.auth.forgotPassword(email: 'user@example.com');
@@ -262,31 +265,28 @@ KoolbaseDynamicScreen(
 Define conditional app behavior as data in your Runtime Bundle — no code changes required.
 
 ```dart
-// flows.json in your bundle
-// {
-//   "on_checkout_tap": {
-//     "type": "if",
-//     "condition": { "op": "eq", "left": { "from": "context.plan" }, "right": "free" },
-//     "then": { "type": "event", "name": "show_upgrade" },
-//     "else": { "type": "event", "name": "go_checkout" }
-//   }
-// }
-
 final result = Koolbase.executeFlow(
   flowId: 'on_checkout_tap',
-  context: { 'plan': user.plan },
+  context: { 'plan': user.plan, 'usage': user.usage },
 );
 
 if (result.hasEvent) {
-  Navigator.pushNamed(context, result.eventName!);
+  switch (result.eventName) {
+    case 'show_upgrade': Navigator.pushNamed(context, '/upgrade');
+    case 'go_checkout': Navigator.pushNamed(context, '/checkout');
+  }
 }
 ```
+
+**v2 operators:** `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `contains`, `starts_with`, `ends_with`, `in_list`, `not_in_list`, `between`, `is_true`, `is_false`, `exists`, `not_exists`, `and`, `or`
+
+Full docs at [docs.koolbase.com/sdk/logic-engine](https://docs.koolbase.com/sdk/logic-engine).
 
 ---
 
 ## Analytics
 
-Track screen views, custom events, and user behaviour. View DAU, WAU, MAU, top events, and top screens in the Koolbase dashboard.
+Track screen views, custom events, and user behaviour. View DAU, WAU, MAU, funnels, and retention in the Koolbase dashboard.
 
 ```dart
 // Add to MaterialApp for automatic screen tracking
@@ -312,6 +312,27 @@ Koolbase.analytics.reset();
 
 ---
 
+## Cloud Messaging
+
+```dart
+// Register FCM token
+final fcmToken = await FirebaseMessaging.instance.getToken();
+await Koolbase.messaging.registerToken(
+  token: fcmToken!,
+  platform: 'android', // or 'ios'
+);
+
+// Send to a specific device
+await Koolbase.messaging.send(
+  to: deviceToken,
+  title: 'Your order is ready',
+  body: 'Pick up at counter 3',
+  data: {'order_id': '123'},
+);
+```
+
+---
+
 ## What's included
 
 | Feature | Koolbase | Firebase | Supabase |
@@ -326,47 +347,8 @@ Koolbase.analytics.reset();
 | Server-driven UI | ✅ | ❌ | ❌ |
 | Logic engine (flows OTA) | ✅ | ❌ | ❌ |
 | Analytics | ✅ | ✅ | ❌ |
-| Self-hostable | ✅ | ❌ | ✅ |
-
----
-
-## Logic Engine v2
-
-```dart
-final result = Koolbase.executeFlow(
-  'on_checkout_tap',
-  context: {
-    'plan': user.plan,
-    'usage': user.usage,
-  },
-);
-
-if (result.hasEvent) {
-  switch (result.eventName) {
-    case 'show_upgrade': navigator.pushNamed('/upgrade');
-    case 'go_checkout': navigator.pushNamed('/checkout');
-  }
-}
-```
-
-**v2 operators:** `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `contains`, `starts_with`, `ends_with`, `in_list`, `not_in_list`, `between`, `is_true`, `is_false`, `exists`, `not_exists`, `and`, `or`
-
-Full docs at [docs.koolbase.com/sdk/logic-engine](https://docs.koolbase.com/sdk/logic-engine).
-
----
-
-## Sign in with Apple
-
-```dart
-import 'package:koolbase_flutter/koolbase_flutter.dart';
-
-final session = await KoolbaseAppleAuth.signIn();
-if (session != null) {
-  print('Signed in: ${session['user']['email']}');
-}
-```
-
-Add `sign_in_with_apple` to your pubspec.yaml. Full setup guide at [docs.koolbase.com/auth/oauth](https://docs.koolbase.com/auth/oauth).
+| Cloud Messaging | ✅ | ✅ | ❌ |
+| Sign in with Apple | ✅ | ✅ | ❌ |
 
 ---
 
@@ -382,7 +364,7 @@ Manage your projects at [app.koolbase.com](https://app.koolbase.com)
 
 - [GitHub Issues](https://github.com/kennedyowusu/koolbase_flutter/issues)
 - [docs.koolbase.com](https://docs.koolbase.com)
-- Email: <hello@koolbase.com>
+- Email: hello@koolbase.com
 
 ## License
 
