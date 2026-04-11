@@ -1,3 +1,7 @@
+## 2.6.4
+
+- README update — full feature documentation
+
 ## 2.6.3
 
 - Updated drift to ^2.31.0
