@@ -2,6 +2,8 @@ class KoolbaseUser {
   final String id;
   final String projectId;
   final String email;
+  final String? phoneNumber;
+  final bool phoneVerified;
   final String? fullName;
   final String? avatarUrl;
   final bool verified;
@@ -15,6 +17,8 @@ class KoolbaseUser {
     required this.id,
     required this.projectId,
     required this.email,
+    this.phoneNumber,
+    this.phoneVerified = false,
     this.fullName,
     this.avatarUrl,
     required this.verified,
@@ -29,7 +33,9 @@ class KoolbaseUser {
     return KoolbaseUser(
       id: json['id'] as String,
       projectId: json['project_id'] as String,
-      email: json['email'] as String,
+      email: (json['email'] as String?) ?? '',
+      phoneNumber: json['phone_number'] as String?,
+      phoneVerified: json['phone_verified'] as bool? ?? false,
       fullName: json['full_name'] as String?,
       avatarUrl: json['avatar_url'] as String?,
       verified: json['verified'] as bool? ?? false,
@@ -49,6 +55,8 @@ class KoolbaseUser {
         'id': id,
         'project_id': projectId,
         'email': email,
+        if (phoneNumber != null) 'phone_number': phoneNumber,
+        'phone_verified': phoneVerified,
         'full_name': fullName,
         'avatar_url': avatarUrl,
         'verified': verified,
@@ -63,12 +71,16 @@ class KoolbaseUser {
     String? fullName,
     String? avatarUrl,
     bool? verified,
+    String? phoneNumber,
+    bool? phoneVerified,
     Map<String, dynamic>? metadata,
   }) {
     return KoolbaseUser(
       id: id,
       projectId: projectId,
       email: email,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      phoneVerified: phoneVerified ?? this.phoneVerified,
       fullName: fullName ?? this.fullName,
       avatarUrl: avatarUrl ?? this.avatarUrl,
       verified: verified ?? this.verified,
@@ -104,4 +116,34 @@ class AuthSession {
   }
 
   bool get isExpired => DateTime.now().isAfter(expiresAt);
+}
+
+/// Result of [KoolbaseAuthClient.sendOtp] — exposes the OTP expiry timestamp
+/// so apps can show a "resend in N seconds" countdown.
+class OtpSendResult {
+  final DateTime expiresAt;
+
+  const OtpSendResult({required this.expiresAt});
+
+  factory OtpSendResult.fromJson(Map<String, dynamic> json) {
+    return OtpSendResult(
+      expiresAt: DateTime.parse(json['expires_at'] as String),
+    );
+  }
+}
+
+/// Result of [KoolbaseAuthClient.verifyOtp] — wraps the issued [AuthSession]
+/// with [isNewUser] so apps can route first-time users to onboarding.
+class PhoneVerifyResult {
+  final AuthSession session;
+  final bool isNewUser;
+
+  const PhoneVerifyResult({required this.session, required this.isNewUser});
+
+  factory PhoneVerifyResult.fromJson(Map<String, dynamic> json) {
+    return PhoneVerifyResult(
+      session: AuthSession.fromJson(json),
+      isNewUser: json['is_new_user'] as bool? ?? false,
+    );
+  }
 }

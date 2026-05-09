@@ -182,4 +182,73 @@ class AuthApi {
     }
     throw Exception('OAuth login failed: \${response.statusCode}');
   }
+
+  Future<OtpSendResult> sendOtp({required String phoneNumber}) async {
+    final res = await http
+        .post(
+          Uri.parse('$baseUrl/v1/sdk/auth/phone/send-otp'),
+          headers: _headers,
+          body: jsonEncode({'phone_number': phoneNumber}),
+        )
+        .timeout(const Duration(seconds: 10));
+    _checkPhoneError(res);
+    return OtpSendResult.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
+  }
+
+  Future<PhoneVerifyResult> verifyOtp({
+    required String phoneNumber,
+    required String code,
+  }) async {
+    final res = await http
+        .post(
+          Uri.parse('$baseUrl/v1/sdk/auth/phone/verify-otp'),
+          headers: _headers,
+          body: jsonEncode({'phone_number': phoneNumber, 'code': code}),
+        )
+        .timeout(const Duration(seconds: 10));
+    _checkPhoneError(res);
+    return PhoneVerifyResult.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
+  }
+
+  Future<void> linkPhone({
+    required String accessToken,
+    required String phoneNumber,
+    required String code,
+  }) async {
+    final res = await http
+        .post(
+          Uri.parse('$baseUrl/v1/sdk/auth/phone/link'),
+          headers: _authHeaders(accessToken),
+          body: jsonEncode({'phone_number': phoneNumber, 'code': code}),
+        )
+        .timeout(const Duration(seconds: 10));
+    _checkPhoneError(res);
+  }
+
+  void _checkPhoneError(http.Response res) {
+    if (res.statusCode >= 200 && res.statusCode < 300) return;
+    Map<String, dynamic> body = {};
+    try {
+      body = jsonDecode(res.body) as Map<String, dynamic>;
+    } catch (_) {}
+    final msg = (body['error'] as String?) ?? '';
+
+    if (res.statusCode == 429) throw const OtpRateLimitException();
+    if (res.statusCode == 409) throw const PhoneAlreadyLinkedException();
+
+    if (msg.contains('E.164')) throw const InvalidPhoneNumberException();
+    if (msg.contains('OTP has expired')) throw const OtpExpiredException();
+    if (msg.contains('too many incorrect attempts')) {
+      throw const OtpMaxAttemptsException();
+    }
+    if (msg.contains('invalid OTP') || msg.contains('invalid or expired OTP')) {
+      throw const OtpInvalidException();
+    }
+    if (msg.contains('SMS provider not configured')) {
+      throw const SmsConfigMissingException();
+    }
+
+    throw KoolbaseAuthException(
+        msg.isEmpty ? 'An unexpected error occurred' : msg);
+  }
 }

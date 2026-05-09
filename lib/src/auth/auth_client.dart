@@ -193,4 +193,39 @@ class KoolbaseAuthClient {
       return null;
     }
   }
+
+  /// Send a 6-digit OTP to the given E.164 phone number.
+  /// Returns the OTP expiry timestamp so the app can show a resend countdown.
+  Future<OtpSendResult> sendOtp({required String phoneNumber}) async {
+    return _api.sendOtp(phoneNumber: phoneNumber);
+  }
+
+  /// Verify the OTP code and complete sign-in. If no user exists with this
+  /// phone, one is created. The returned [PhoneVerifyResult.isNewUser] flag
+  /// lets the app route first-time users to onboarding.
+  Future<PhoneVerifyResult> verifyOtp({
+    required String phoneNumber,
+    required String code,
+  }) async {
+    final result = await _api.verifyOtp(phoneNumber: phoneNumber, code: code);
+    await _setSession(result.session);
+    return result;
+  }
+
+  /// Link a phone number to the currently authenticated user.
+  /// User must already be signed in (via email/password, OAuth, or another
+  /// auth method) and must have requested an OTP for this phone number first.
+  Future<void> linkPhone({
+    required String phoneNumber,
+    required String code,
+  }) async {
+    final token = await _ensureValidToken();
+    await _api.linkPhone(
+      accessToken: token,
+      phoneNumber: phoneNumber,
+      code: code,
+    );
+    final updated = await _api.getMe(token);
+    _currentUser = updated;
+  }
 }
