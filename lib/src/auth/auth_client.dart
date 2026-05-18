@@ -134,16 +134,32 @@ class KoolbaseAuthClient {
     return session.user;
   }
 
-  Future<void> logout() async {
+  /// Log the user out.
+  ///
+  /// The local session is **always cleared**, regardless of whether the
+  /// server-side logout succeeded. This is intentional: a network error
+  /// during logout should not leave the user locally "logged in" with a
+  /// stale token — that's a worse UX (and a security regression on
+  /// shared devices) than a silent server-side stale-session.
+  ///
+  /// Returns `true` if the server-side logout succeeded (or if there was
+  /// no access token to invalidate); `false` if the server call failed
+  /// (network error, server rejected, etc). Apps that need to handle the
+  /// server-side failure explicitly — for example, prompting the user to
+  /// re-sign-in from a shared device once network returns — can branch on
+  /// this; apps that don't care can ignore the return value.
+  Future<bool> logout() async {
+    bool serverLogoutSucceeded = true;
     try {
       if (_accessToken != null) {
         await _api.logout(_accessToken!);
       }
     } catch (_) {
-      // Best effort
+      serverLogoutSucceeded = false;
     } finally {
       await _clearSession();
     }
+    return serverLogoutSucceeded;
   }
 
   Future<KoolbaseUser> getCurrentUser() async {
@@ -305,8 +321,15 @@ class KoolbaseAuthClient {
     _authStateController.add(null);
   }
 
+  /// Dispose of the auth client. Closes the auth state stream and cascades
+  /// to [AuthApi.dispose] which closes the underlying HTTP client iff the
+  /// SDK owns it (caller-supplied clients are not closed).
+  ///
+  /// Safe to call multiple times. After dispose, the client should not be
+  /// used.
   void dispose() {
     _authStateController.close();
+    _api.dispose();
   }
 
   /// **DEPRECATED.** The server-side `/v1/sdk/auth/oauth` endpoint for

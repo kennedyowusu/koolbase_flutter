@@ -33,6 +33,7 @@ export 'database/database_models.dart';
 export 'database/database_query.dart' show KoolbaseQuery;
 export 'storage/storage_models.dart';
 import 'auth/auth_client.dart';
+import 'auth/device_metadata.dart';
 import 'cache.dart';
 import 'device_id.dart';
 import 'evaluator.dart';
@@ -63,6 +64,20 @@ class KoolbaseConfig {
   /// Whether to enable cloud messaging (default: true)
   final bool messagingEnabled;
 
+  /// Timeout applied to every authentication HTTP request. Default 10s.
+  /// Tune up for high-latency networks; tune down for fast-fail UX.
+  final Duration authTimeout;
+
+  /// Optional HTTP client used for authentication requests. If provided,
+  /// the SDK will use it instead of constructing its own — letting you add
+  /// logging, retry middleware, proxy configuration, or share a single
+  /// client across your app. The SDK will NOT close a caller-supplied
+  /// client; the caller owns its lifecycle.
+  ///
+  /// Currently scoped to auth requests; other SDK modules (storage,
+  /// database, realtime, etc.) will adopt this in a future release.
+  final http.Client? httpClient;
+
   const KoolbaseConfig({
     required this.publicKey,
     required this.baseUrl,
@@ -71,6 +86,8 @@ class KoolbaseConfig {
     this.rfwWidgets = const [],
     this.analyticsEnabled = true,
     this.messagingEnabled = true,
+    this.authTimeout = const Duration(seconds: 10),
+    this.httpClient,
   });
 }
 
@@ -118,9 +135,13 @@ class Koolbase {
     _instance = instance;
 
     // Initialize auth client
+    final deviceMetadata = await DeviceMetadata.build();
     final authApi = AuthApi(
       baseUrl: config.baseUrl,
       publicKey: config.publicKey,
+      deviceMetadata: deviceMetadata,
+      timeout: config.authTimeout,
+      client: config.httpClient,
     );
     _auth = KoolbaseAuthClient(
       api: authApi,

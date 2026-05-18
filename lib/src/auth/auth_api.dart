@@ -17,11 +17,42 @@ class AuthApi {
   /// Build via [DeviceMetadata.build] once at SDK init.
   final DeviceMetadata? deviceMetadata;
 
+  /// Timeout applied to every authentication HTTP request. Default 10s.
+  ///
+  /// Tune up for high-latency networks (e.g. cross-region mobile in
+  /// emerging markets); tune down for fast-fail UX on first-byte latency.
+  final Duration timeout;
+
+  final http.Client _client;
+  final bool _ownsClient;
+
+  /// Construct an AuthApi.
+  ///
+  /// [client] is optional. If provided, the SDK will use it for all auth
+  /// requests and will NOT close it on [dispose] — the caller owns the
+  /// client's lifecycle. Provide your own client to add logging, retries,
+  /// proxy config, or to share connection pools across SDK modules.
+  ///
+  /// If omitted, a fresh [http.Client] is constructed and is closed by
+  /// [dispose].
   AuthApi({
     required this.baseUrl,
     required this.publicKey,
     this.deviceMetadata,
-  });
+    this.timeout = const Duration(seconds: 10),
+    http.Client? client,
+  })  : _client = client ?? http.Client(),
+        _ownsClient = client == null;
+
+  /// Close the underlying HTTP client if this AuthApi owns it. Safe to
+  /// call multiple times; no-op for caller-supplied clients.
+  ///
+  /// Called automatically by [KoolbaseAuthClient.dispose].
+  void dispose() {
+    if (_ownsClient) {
+      _client.close();
+    }
+  }
 
   Map<String, String> get _headers => {
         'Content-Type': 'application/json',
@@ -41,7 +72,7 @@ class AuthApi {
     required String password,
     String? fullName,
   }) async {
-    final res = await http
+    final res = await _client
         .post(
           Uri.parse('$baseUrl/v1/sdk/auth/register'),
           headers: _headers,
@@ -51,7 +82,7 @@ class AuthApi {
             if (fullName != null) 'full_name': fullName,
           }),
         )
-        .timeout(const Duration(seconds: 10));
+        .timeout(timeout);
     return _parseSession(res);
   }
 
@@ -59,13 +90,13 @@ class AuthApi {
     required String email,
     required String password,
   }) async {
-    final res = await http
+    final res = await _client
         .post(
           Uri.parse('$baseUrl/v1/sdk/auth/login'),
           headers: _headers,
           body: jsonEncode({'email': email, 'password': password}),
         )
-        .timeout(const Duration(seconds: 10));
+        .timeout(timeout);
     return _parseSession(res);
   }
 
@@ -74,32 +105,33 @@ class AuthApi {
   /// (revoked, expired, or otherwise invalid) — distinct from login's 401
   /// which means bad credentials.
   Future<AuthSession> refresh(String refreshToken) async {
-    final res = await http
+    final res = await _client
         .post(
           Uri.parse('$baseUrl/v1/sdk/auth/refresh'),
           headers: _headers,
           body: jsonEncode({'refresh_token': refreshToken}),
         )
-        .timeout(const Duration(seconds: 10));
+        .timeout(timeout);
     return _parseSession(res, isRefresh: true);
   }
 
   Future<void> logout(String accessToken) async {
-    await http
+    final res = await _client
         .post(
           Uri.parse('$baseUrl/v1/sdk/auth/logout'),
           headers: _authHeaders(accessToken),
         )
-        .timeout(const Duration(seconds: 10));
+        .timeout(timeout);
+    _checkError(res);
   }
 
   Future<KoolbaseUser> getMe(String accessToken) async {
-    final res = await http
+    final res = await _client
         .get(
           Uri.parse('$baseUrl/v1/sdk/auth/me'),
           headers: _authHeaders(accessToken),
         )
-        .timeout(const Duration(seconds: 10));
+        .timeout(timeout);
     _checkError(res);
     return KoolbaseUser.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
   }
@@ -109,7 +141,7 @@ class AuthApi {
     String? fullName,
     String? avatarUrl,
   }) async {
-    final res = await http
+    final res = await _client
         .patch(
           Uri.parse('$baseUrl/v1/sdk/auth/me'),
           headers: _authHeaders(accessToken),
@@ -118,19 +150,19 @@ class AuthApi {
             if (avatarUrl != null) 'avatar_url': avatarUrl,
           }),
         )
-        .timeout(const Duration(seconds: 10));
+        .timeout(timeout);
     _checkError(res);
     return KoolbaseUser.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
   }
 
   Future<void> forgotPassword(String email) async {
-    final res = await http
+    final res = await _client
         .post(
           Uri.parse('$baseUrl/v1/sdk/auth/password-reset'),
           headers: _headers,
           body: jsonEncode({'email': email}),
         )
-        .timeout(const Duration(seconds: 10));
+        .timeout(timeout);
     _checkError(res);
   }
 
@@ -138,24 +170,24 @@ class AuthApi {
     required String token,
     required String password,
   }) async {
-    final res = await http
+    final res = await _client
         .post(
           Uri.parse('$baseUrl/v1/sdk/auth/password-reset/confirm'),
           headers: _headers,
           body: jsonEncode({'token': token, 'password': password}),
         )
-        .timeout(const Duration(seconds: 10));
+        .timeout(timeout);
     _checkError(res);
   }
 
   Future<void> verifyEmail(String token) async {
-    final res = await http
+    final res = await _client
         .post(
           Uri.parse('$baseUrl/v1/sdk/auth/verify-email'),
           headers: _headers,
           body: jsonEncode({'token': token}),
         )
-        .timeout(const Duration(seconds: 10));
+        .timeout(timeout);
     _checkError(res);
   }
 
@@ -163,13 +195,13 @@ class AuthApi {
   /// nothing on success (204). Throws [UnlockTokenInvalidException] if
   /// the token is invalid, expired, or already consumed.
   Future<void> unlock(String token) async {
-    final res = await http
+    final res = await _client
         .post(
           Uri.parse('$baseUrl/v1/sdk/auth/unlock'),
           headers: _headers,
           body: jsonEncode({'token': token}),
         )
-        .timeout(const Duration(seconds: 10));
+        .timeout(timeout);
     _checkError(res);
   }
 
@@ -261,13 +293,13 @@ class AuthApi {
   }
 
   Future<OtpSendResult> sendOtp({required String phoneNumber}) async {
-    final res = await http
+    final res = await _client
         .post(
           Uri.parse('$baseUrl/v1/sdk/auth/phone/send-otp'),
           headers: _headers,
           body: jsonEncode({'phone_number': phoneNumber}),
         )
-        .timeout(const Duration(seconds: 10));
+        .timeout(timeout);
     _checkPhoneError(res);
     return OtpSendResult.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
   }
@@ -276,13 +308,13 @@ class AuthApi {
     required String phoneNumber,
     required String code,
   }) async {
-    final res = await http
+    final res = await _client
         .post(
           Uri.parse('$baseUrl/v1/sdk/auth/phone/verify-otp'),
           headers: _headers,
           body: jsonEncode({'phone_number': phoneNumber, 'code': code}),
         )
-        .timeout(const Duration(seconds: 10));
+        .timeout(timeout);
     _checkPhoneError(res);
     return PhoneVerifyResult.fromJson(
         jsonDecode(res.body) as Map<String, dynamic>);
@@ -293,13 +325,13 @@ class AuthApi {
     required String phoneNumber,
     required String code,
   }) async {
-    final res = await http
+    final res = await _client
         .post(
           Uri.parse('$baseUrl/v1/sdk/auth/phone/link'),
           headers: _authHeaders(accessToken),
           body: jsonEncode({'phone_number': phoneNumber, 'code': code}),
         )
-        .timeout(const Duration(seconds: 10));
+        .timeout(timeout);
     _checkPhoneError(res);
   }
 

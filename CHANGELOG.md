@@ -1,3 +1,166 @@
+# 2.9.1
+
+Polish release: configurable HTTP timeout, injectable HTTP client, and a `logout()` that lets you know whether the server-side call succeeded. Also fixes a wiring oversight from v2.9.0: the device metadata headers introduced in that release were not actually being attached to requests — the SDK had the code but no construction site. v2.9.1 wires it through properly.
+
+### Fixed
+
+- **Device metadata headers (from v2.9.0) are now actually attached to authentication requests.** v2.9.0 introduced the `DeviceMetadata` class and the supporting `koolbaseSdkVersion` constant, and `AuthApi` was updated to accept a `DeviceMetadata` instance — but the `Koolbase.initialize()` flow was not updated to construct one and pass it in. As a result, no `x-koolbase-*` headers or structured `User-Agent` were sent on the wire from v2.9.0. v2.9.1 restores the intended behavior. Upgrade from v2.9.0 to get the metadata features described in the v2.9.0 release notes.
+
+### Added (2.9.1)
+
+- **`KoolbaseConfig.authTimeout`** (`Duration`, default 10s): timeout applied to every authentication HTTP request. Tune up for high-latency networks; tune down for fast-fail UX on first-byte latency.
+- **`KoolbaseConfig.httpClient`** (`http.Client?`, default null): inject your own HTTP client for logging interception, retry middleware, proxy configuration, or sharing connection pools. The SDK will NOT close a caller-supplied client; the caller owns its lifecycle. Currently scoped to auth requests; other SDK modules (storage, database, realtime, etc.) will adopt this in a future release.
+- **`AuthApi.dispose()`** closes the underlying HTTP client iff the SDK owns it. Called automatically by `KoolbaseAuthClient.dispose()` for clean shutdown.
+
+### Changed
+
+- **`KoolbaseAuthClient.logout()`** now returns `Future<bool>` instead of `Future<void>`. The local session is **always cleared** regardless of whether the server-side logout succeeded (intentional best-effort behavior to avoid leaving stale tokens client-side after a network error). The return value indicates whether the server-side call succeeded — `true` if it did (or if there was no access token to invalidate), `false` if the server call failed. Source-compatible for callers ignoring the return value.
+- **`KoolbaseAuthClient.dispose()`** now also cascades to `AuthApi.dispose()` so the HTTP client gets closed on shutdown.
+
+### Usage
+
+```dart
+// Default: 10s auth timeout, SDK-owned http.Client
+await Koolbase.initialize(KoolbaseConfig(
+  publicKey: 'pk_live_...',
+  baseUrl: 'https://api.koolbase.com',
+));
+
+// Custom timeout for slow networks
+await Koolbase.initialize(KoolbaseConfig(
+  publicKey: 'pk_live_...',
+  baseUrl: 'https://api.koolbase.com',
+  authTimeout: const Duration(seconds: 30),
+));
+
+// Inject your own HTTP client (logging, retries, proxy, etc.)
+final myClient = MyLoggingClient();
+await Koolbase.initialize(KoolbaseConfig(
+  publicKey: 'pk_live_...',
+  baseUrl: 'https://api.koolbase.com',
+  httpClient: myClient,
+));
+
+// Check whether server logout succeeded
+final ok = await Koolbase.auth.logout();
+if (!ok) {
+  // Local session was cleared; server may not be fully aware
+}
+```
+
+# 2.9.0
+
+A comprehensive overhaul of the authentication module. This release closes seven independent gaps identified by a focused security and reliability audit, adds proper device-attributed session tracking, fixes a refresh-token race that could invalidate concurrent in-flight requests, and honestly deprecates OAuth methods that were never fully wired up on the server side.
+
+## Highlights
+
+- **Pluggable storage**: a new `KoolbaseAuthStorage` abstract interface lets you plug in custom storage backends (compliant encryption layers, web targets, in-memory test mocks). The default `SecureAuthStorage` now persists the full session — access token, refresh token, expiry, and user — not just the refresh token.
+- **Offline-aware session restoration**: `restoreSession()` returns a `RestoreResult` enum (`noSession` / `restored` / `expired` / `offline`) so your app can render the correct UI immediately. App launches no longer require a network round-trip to show authenticated state.
+- **Single-flight refresh**: concurrent API calls that find an expired token now share one underlying refresh call, fixing a race where parallel refreshes could invalidate each other's tokens.
+- **Expanded typed exceptions**: `AccountLockedException`, `RateLimitException`, `UnlockTokenInvalidException`, `TokenRevokedException` — covering brute-force lockouts (HTTP 429), general rate limits, the unlock-email flow, and centrally revoked sessions.
+- **Device metadata on every auth request**: a structured `User-Agent` plus `x-koolbase-*` headers (SDK version, platform, app version, stable per-install device label) so the server's sessions infrastructure can attribute activity for the sessions UI, future security alerts, and analytics.
+
+## Added
+
+- `KoolbaseAuthStorage` abstract interface — implement your own to plug in custom auth storage backends.
+- `SecureAuthStorage` default implementation backed by `flutter_secure_storage` with explicit iOS Keychain accessibility (`first_unlock_this_device`) and Android EncryptedSharedPreferences.
+- `PersistedSession` value class for fully-typed session persistence.
+- `RestoreResult` enum returned by `KoolbaseAuthClient.restoreSession()`.
+- `KoolbaseAuthClient.unlock(String token)` — consume an unlock token from a brute-force unlock email.
+- `DeviceMetadata` class built automatically at `Koolbase.initialize()`; persists a stable per-install device label.
+- `koolbaseSdkVersion` constant exported for consumers who need to assert SDK version at runtime.
+- New typed exceptions:
+  - `AccountLockedException` — brute-force lockout (HTTP 429 + lockout marker). Includes a forward-compatible nullable `lockedUntil` field.
+  - `RateLimitException` — general HTTP 429 without the lockout marker.
+  - `UnlockTokenInvalidException` — invalid or expired unlock email token (one-shot).
+  - `TokenRevokedException` — session has been revoked centrally (distinct from `SessionExpiredException`).
+
+### Changed
+
+- **`KoolbaseAuthClient.restoreSession()`** signature changed from `Future<void>` to `Future<RestoreResult>`. Source-compatible for callers ignoring the return value; callers wanting offline-aware UI should branch on the enum.
+- **`AuthApi`** constructor is no longer `const` — it now accepts optional `DeviceMetadata`. Source-compatible for code that doesn't use the `const` keyword (the default in most apps).
+- **`KoolbaseAuthClient.refreshSession()`** and the internal `_ensureValidToken()` go through a single-flight refresh path; concurrent callers share one underlying refresh.
+- Every authenticated request now carries `User-Agent`, `x-koolbase-sdk`, `x-koolbase-sdk-version`, `x-koolbase-platform`, `x-koolbase-platform-version`, `x-koolbase-app-version`, and `x-koolbase-device-label` headers.
+
+### Fixed
+
+- **Refresh-token race**: parallel API calls hitting an expired token no longer trigger competing refresh calls. Server-side refresh-token rotation no longer invalidates peer in-flight tokens.
+- **Offline launch**: `restoreSession()` previously cleared all auth state on any error including network failures, silently logging users out. It now distinguishes auth rejection from network errors and keeps optimistic state in the offline case.
+- **401-on-refresh**: refresh failures returning HTTP 401 previously surfaced as `InvalidCredentialsException` ("wrong password"). They now correctly throw `SessionExpiredException`.
+- **Profile updates not persisting**: `updateProfile()`, `getCurrentUser()`, and `linkPhone()` updated in-memory state but didn't re-persist the user. Changes were lost on app restart. Now persisted via a new internal helper.
+- **`linkPhone` listener not firing**: profile updates after phone linking now correctly emit on `authStateChanges`.
+- **`forgotPassword` silently swallowed errors**: now properly checks the response status and surfaces errors as typed exceptions.
+
+### Deprecated
+
+- **OAuth methods**: `KoolbaseAuthClient.oauthLogin()`, `AuthApi.oauthLogin()`, and `KoolbaseAppleAuth.signIn()`. The previous implementations targeted `/v1/auth/oauth` — the dashboard's developer OAuth handler — which never created project-scoped sessions for end-users. All three methods now throw `UnimplementedError`. Proper end-user OAuth endpoints (`/v1/sdk/auth/oauth/apple`, `/google`, `/github`) are tracked for v2.10.x. Use `KoolbaseAuthClient.login()` with email/password until then.
+- **`AuthStorage`** class: replaced by `SecureAuthStorage`. The old class remains as a `@Deprecated` subclass for source compatibility and will be removed in v3.0.0.
+
+### Migration
+
+**If you construct `AuthStorage` directly:**
+
+```dart
+// Before
+final client = KoolbaseAuthClient(api: api, storage: AuthStorage());
+
+// After (recommended — uses the default)
+final client = KoolbaseAuthClient(api: api);
+
+// Or explicit
+final client = KoolbaseAuthClient(api: api, storage: SecureAuthStorage());
+```
+
+**If you handle `restoreSession()`:**
+
+```dart
+// Before
+await Koolbase.auth.restoreSession();
+if (Koolbase.auth.isAuthenticated) {
+  // Show app
+} else {
+  // Show login
+}
+
+// After (recommended — branch on outcome)
+final result = await Koolbase.auth.restoreSession();
+switch (result) {
+  case RestoreResult.noSession:
+    // Show login
+  case RestoreResult.restored:
+    // Show app
+  case RestoreResult.expired:
+    // Show login with "session expired" message
+  case RestoreResult.offline:
+    // Show app optimistically; retry refresh when network returns
+}
+```
+
+**If you call `oauthLogin()` or `KoolbaseAppleAuth.signIn()`:**
+
+These now throw `UnimplementedError`. End-user OAuth is blocked on a server-side endpoint that ships in v2.10.x. Use email/password authentication via `KoolbaseAuthClient.login()` for now.
+
+**If you catch generic `KoolbaseAuthException` for lockout or rate-limit cases:**
+
+Consider catching the more specific types now:
+
+```dart
+try {
+  await Koolbase.auth.login(email: email, password: password);
+} on AccountLockedException {
+  // Show "account temporarily locked" UI; offer "unlock via email" path
+} on RateLimitException {
+  // Show "too many attempts, please wait" UI
+} on InvalidCredentialsException {
+  // Show "wrong email or password"
+}
+```
+
+### Internal
+
+- `KoolbaseAuthClient` no longer imports `package:flutter/material.dart` (was only needed for `debugPrint` in OAuth error paths, which are now deprecated stubs).
+- New `lib/src/auth/device_metadata.dart` module.
+
 # 2.8.0
 
 - **Functions:** Authenticated invocations now forward the signed-in user's session automatically.
