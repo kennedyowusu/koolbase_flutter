@@ -33,7 +33,6 @@ export 'database/database_models.dart';
 export 'database/database_query.dart' show KoolbaseQuery;
 export 'storage/storage_models.dart';
 import 'auth/auth_client.dart';
-import 'auth/auth_storage.dart';
 import 'cache.dart';
 import 'device_id.dart';
 import 'evaluator.dart';
@@ -125,7 +124,6 @@ class Koolbase {
     );
     _auth = KoolbaseAuthClient(
       api: authApi,
-      storage: AuthStorage(),
     );
 
     // Restore auth session from secure storage
