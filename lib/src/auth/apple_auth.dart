@@ -1,50 +1,41 @@
-import 'package:flutter/foundation.dart';
-import 'package:koolbase_flutter/koolbase_flutter.dart';
-import 'package:sign_in_with_apple/sign_in_with_apple.dart';
-import '../koolbase.dart';
-
-/// KoolbaseAppleAuth — Sign in with Apple for Koolbase
+/// KoolbaseAppleAuth — Sign in with Apple for Koolbase.
 ///
-/// Usage:
-/// ```dart
-/// final session = await KoolbaseAppleAuth.signIn();
-/// ```
+/// **DEPRECATED in v2.9.0.** Apple Sign-In via this class was internally
+/// routed through [KoolbaseAuthClient.oauthLogin], which called
+/// `/v1/auth/oauth` — the **dashboard's developer OAuth handler**, not
+/// an end-user surface. As a result, [signIn] never actually created
+/// project-scoped sessions for end-users.
+///
+/// A proper end-user Apple Sign-In flow requires a server-side
+/// `/v1/sdk/auth/oauth/apple` endpoint that:
+/// 1. Accepts the Apple identityToken from this SDK
+/// 2. Verifies the token via Apple's JWKS
+/// 3. Creates or finds a user in the calling project (via x-api-key)
+/// 4. Returns an [AuthSession] with access + refresh tokens
+///
+/// That endpoint is tracked for v2.10.x along with the equivalent Google
+/// and GitHub flows. For now, [signIn] throws [UnimplementedError]. Use
+/// [KoolbaseAuthClient.login] with email and password until the proper
+/// server endpoints ship.
+@Deprecated(
+    'Apple Sign-In for end-users blocked on server-side /v1/sdk/auth/oauth '
+    'endpoint. Use email/password authentication for now. Tracking: v2.10.x.')
 class KoolbaseAppleAuth {
-  /// Sign in with Apple and authenticate with Koolbase.
-  /// Returns a KoolbaseSession on success.
+  /// **DEPRECATED.** See class-level documentation.
+  ///
+  /// Throws [UnimplementedError]. Will be properly implemented in v2.10.x
+  /// once the server endpoint ships.
+  @Deprecated(
+      'Apple Sign-In for end-users blocked on server-side /v1/sdk/auth/oauth '
+      'endpoint. Use email/password authentication for now. Tracking: v2.10.x.')
   static Future<Map<String, dynamic>?> signIn() async {
-    try {
-      final credential = await SignInWithApple.getAppleIDCredential(
-        scopes: [
-          AppleIDAuthorizationScopes.email,
-          AppleIDAuthorizationScopes.fullName,
-        ],
-      );
-
-      final identityToken = credential.identityToken;
-      if (identityToken == null) {
-        debugPrint('[KoolbaseAppleAuth] No identity token returned');
-        return null;
-      }
-
-      // Build display name from Apple credential
-      final name = [
-        credential.givenName,
-        credential.familyName,
-      ].where((s) => s != null && s.isNotEmpty).join(' ');
-
-      // Authenticate with Koolbase
-      final session = await Koolbase.auth.oauthLogin(
-        provider: 'apple',
-        token: identityToken,
-        email: credential.email ?? '',
-        name: name,
-      );
-
-      return session;
-    } catch (e) {
-      debugPrint('[KoolbaseAppleAuth] Sign in failed: $e');
-      return null;
-    }
+    throw UnimplementedError(
+      'KoolbaseAppleAuth.signIn is not yet supported. The previous '
+      "implementation routed through /v1/auth/oauth — the dashboard's "
+      'developer OAuth handler, which does not create project-scoped '
+      'sessions for end-users. A proper /v1/sdk/auth/oauth/apple endpoint '
+      'is tracked for v2.10.x. For now, use KoolbaseAuthClient.login with '
+      'email/password.',
+    );
   }
 }

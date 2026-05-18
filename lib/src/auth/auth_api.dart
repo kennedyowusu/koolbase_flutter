@@ -2,22 +2,38 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'auth_models.dart';
 import 'auth_exceptions.dart';
+import 'device_metadata.dart';
 
 class AuthApi {
   final String baseUrl;
   final String publicKey;
 
-  const AuthApi({required this.baseUrl, required this.publicKey});
+  /// Optional device metadata. When provided, all authentication requests
+  /// (login, register, refresh, me, profile updates, OTP flows, etc.)
+  /// carry x-koolbase-* headers + a structured User-Agent — letting the
+  /// server attribute session activity to the SDK version, platform, app
+  /// version, and a stable per-install device label.
+  ///
+  /// Build via [DeviceMetadata.build] once at SDK init.
+  final DeviceMetadata? deviceMetadata;
+
+  AuthApi({
+    required this.baseUrl,
+    required this.publicKey,
+    this.deviceMetadata,
+  });
 
   Map<String, String> get _headers => {
         'Content-Type': 'application/json',
         'x-api-key': publicKey,
+        ...?deviceMetadata?.toHeaders(),
       };
 
   Map<String, String> _authHeaders(String accessToken) => {
         'Content-Type': 'application/json',
         'x-api-key': publicKey,
         'Authorization': 'Bearer $accessToken',
+        ...?deviceMetadata?.toHeaders(),
       };
 
   Future<AuthSession> signUp({
@@ -195,7 +211,6 @@ class AuthApi {
     } catch (_) {}
     final msg = (body['error'] as String?) ?? '';
 
-    // 429 — account lock vs general rate limit
     if (res.statusCode == 429) {
       if (msg.contains('account temporarily locked')) {
         throw const AccountLockedException();
@@ -203,12 +218,10 @@ class AuthApi {
       throw RateLimitException(msg.isEmpty ? null : msg);
     }
 
-    // 400 — unlock token invalid (specific message)
     if (msg.contains('invalid or expired unlock token')) {
       throw const UnlockTokenInvalidException();
     }
 
-    // 401 — token revoked (forward-compatible; server messages may evolve)
     if (msg.contains('session revoked') ||
         msg.contains('token revoked') ||
         msg.contains('session has been revoked')) {
@@ -220,6 +233,18 @@ class AuthApi {
     );
   }
 
+  /// **DEPRECATED.** The server-side `/v1/sdk/auth/oauth` endpoint for
+  /// end-user OAuth (Google, GitHub) does not yet exist. The previous
+  /// implementation incorrectly targeted `/v1/auth/oauth`, which is the
+  /// dashboard's developer OAuth handler — not a customer-app surface.
+  ///
+  /// This method is retained as a stub to preserve the call surface. It
+  /// will be properly implemented in v2.10.x once the server endpoint
+  /// ships. For Sign in with Apple, use [KoolbaseAppleAuth.signIn] —
+  /// that flow uses a different server endpoint and works today.
+  @Deprecated(
+      'End-user OAuth server endpoint not yet shipped. Use email/password '
+      'or KoolbaseAppleAuth.signIn for now. Tracking: v2.10.x.')
   Future<Map<String, dynamic>> oauthLogin({
     required String provider,
     required String token,
@@ -227,23 +252,12 @@ class AuthApi {
     String name = '',
     String avatarUrl = '',
   }) async {
-    final response = await http
-        .post(
-          Uri.parse('$baseUrl/v1/auth/oauth'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'provider': provider,
-            'token': token,
-            'email': email,
-            'name': name,
-            'avatar_url': avatarUrl,
-          }),
-        )
-        .timeout(const Duration(seconds: 10));
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    }
-    throw Exception('OAuth login failed: \${response.statusCode}');
+    throw UnimplementedError(
+      'AuthApi.oauthLogin is not yet supported. The server-side '
+      '/v1/sdk/auth/oauth endpoint is on the roadmap for v2.10.x. For now, '
+      'use email/password authentication or KoolbaseAppleAuth.signIn for '
+      'Sign in with Apple.',
+    );
   }
 
   Future<OtpSendResult> sendOtp({required String phoneNumber}) async {

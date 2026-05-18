@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
 
 import 'auth_api.dart';
 import 'auth_models.dart';
@@ -150,8 +149,7 @@ class KoolbaseAuthClient {
   Future<KoolbaseUser> getCurrentUser() async {
     final token = await _ensureValidToken();
     final user = await _api.getMe(token);
-    _currentUser = user;
-    _authStateController.add(user);
+    await _updateUserAndPersist(user);
     return user;
   }
 
@@ -165,8 +163,7 @@ class KoolbaseAuthClient {
       fullName: fullName,
       avatarUrl: avatarUrl,
     );
-    _currentUser = user;
-    _authStateController.add(user);
+    await _updateUserAndPersist(user);
     return user;
   }
 
@@ -241,7 +238,6 @@ class KoolbaseAuthClient {
   Future<AuthSession> _refreshSingleFlight() async {
     final inFlight = _ongoingRefresh;
     if (inFlight != null) {
-      // Another caller already started a refresh — share their Future.
       return inFlight;
     }
 
@@ -260,8 +256,6 @@ class KoolbaseAuthClient {
       completer.complete(session);
       return session;
     } catch (e, st) {
-      // Propagate the error to any concurrent waiters before clearing the
-      // session, so they don't see a half-cleared state.
       if (!completer.isCompleted) completer.completeError(e, st);
       await _clearSession();
       rethrow;
@@ -278,6 +272,31 @@ class KoolbaseAuthClient {
     _authStateController.add(session.user);
   }
 
+  /// Update the in-memory user, fire the auth-state listener, and persist
+  /// the change so it survives app restarts.
+  ///
+  /// Use this whenever the user object changes WITHOUT a fresh session
+  /// (profile updates, phone linking, account verification toggles, etc.).
+  /// For full session changes — login, refresh, OAuth — go through
+  /// [_setSession] instead.
+  Future<void> _updateUserAndPersist(KoolbaseUser user) async {
+    _currentUser = user;
+    _authStateController.add(user);
+
+    // Update persisted session with the new user so the change survives
+    // app restart. Skip silently if no session is persisted (caller is
+    // unauthenticated and shouldn't be updating their user anyway).
+    final persisted = await _storage.readSession();
+    if (persisted != null) {
+      await _storage.saveSession(PersistedSession(
+        accessToken: persisted.accessToken,
+        refreshToken: persisted.refreshToken,
+        expiresAt: persisted.expiresAt,
+        user: user,
+      ));
+    }
+  }
+
   Future<void> _clearSession() async {
     _accessToken = null;
     _accessTokenExpiresAt = null;
@@ -290,34 +309,31 @@ class KoolbaseAuthClient {
     _authStateController.close();
   }
 
-  /// Sign in with an OAuth provider (Google, GitHub, Apple).
+  /// **DEPRECATED.** The server-side `/v1/sdk/auth/oauth` endpoint for
+  /// end-user OAuth (Google, GitHub) does not yet exist. The previous
+  /// implementation incorrectly targeted `/v1/auth/oauth`, which is the
+  /// dashboard's developer OAuth handler — not a customer-app surface.
   ///
-  /// **TODO(v2.9.0 Batch C):** rewrite to return [AuthSession], route through
-  /// [_setSession] for proper session persistence and listener notification,
-  /// and use typed exceptions. Currently returns a raw Map and swallows
-  /// errors — known broken; see audit notes.
-  Future<Map<String, dynamic>?> oauthLogin({
+  /// This method is retained as a stub to preserve the call surface and
+  /// will be properly implemented in v2.10.x once the server endpoint
+  /// ships. For Sign in with Apple, use [KoolbaseAppleAuth.signIn] —
+  /// that flow uses a different server endpoint and works today.
+  @Deprecated(
+      'End-user OAuth server endpoint not yet shipped. Use email/password '
+      'or KoolbaseAppleAuth.signIn for now. Tracking: v2.10.x.')
+  Future<Map<String, dynamic>> oauthLogin({
     required String provider,
     required String token,
     String email = '',
     String name = '',
     String avatarUrl = '',
   }) async {
-    try {
-      final data = await _api.oauthLogin(
-        provider: provider,
-        token: token,
-        email: email,
-        name: name,
-        avatarUrl: avatarUrl,
-      );
-      _accessToken = data['access_token'];
-      _currentUser = data['user'];
-      return data;
-    } catch (e) {
-      debugPrint('[KoolbaseAuth] oauthLogin error: $e');
-      return null;
-    }
+    throw UnimplementedError(
+      'KoolbaseAuthClient.oauthLogin is not yet supported. The server-side '
+      '/v1/sdk/auth/oauth endpoint is on the roadmap for v2.10.x. For now, '
+      'use signIn() with email/password, or KoolbaseAppleAuth.signIn() for '
+      'Sign in with Apple.',
+    );
   }
 
   /// Send a 6-digit OTP to the given E.164 phone number.
@@ -338,11 +354,13 @@ class KoolbaseAuthClient {
     return result;
   }
 
-  /// Link a phone number to the currently authenticated user.
-  /// User must already be signed in (via email/password, OAuth, or another
-  /// auth method) and must have requested an OTP for this phone number first.
+  /// Link a phone number to the currently authenticated user. User must
+  /// already be signed in (via email/password or another auth method) and
+  /// must have requested an OTP for this phone number first.
   ///
-  /// **TODO(v2.9.0 Batch C):** fire authStateChanges after profile update.
+  /// On success, the updated user (with phoneNumber + phoneVerified=true)
+  /// is fetched, persisted, and emitted via [authStateChanges] so listening
+  /// apps see the change immediately and the phone number survives restart.
   Future<void> linkPhone({
     required String phoneNumber,
     required String code,
@@ -354,6 +372,6 @@ class KoolbaseAuthClient {
       code: code,
     );
     final updated = await _api.getMe(token);
-    _currentUser = updated;
+    await _updateUserAndPersist(updated);
   }
 }
