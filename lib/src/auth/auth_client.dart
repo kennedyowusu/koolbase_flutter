@@ -134,6 +134,47 @@ class KoolbaseAuthClient {
     return session.user;
   }
 
+  /// Sign in with Apple using a credential obtained from a native Apple
+  /// Sign-In SDK.
+  ///
+  /// The SDK is library-agnostic — use any native Apple Sign-In package
+  /// (`sign_in_with_apple`, etc.) and pass the resulting [identityToken],
+  /// optional [nonce], and optional [fullName].
+  ///
+  /// [fullName] is meaningful only on first sign-in — Apple omits name
+  /// data on subsequent sign-ins. The server persists at link time and
+  /// ignores on subsequent sign-ins.
+  ///
+  /// On success the session is persisted via [KoolbaseAuthStorage] and
+  /// [authStateChanges] fires with the resolved user. Returns the user
+  /// directly for convenience (mirrors [login] and [signUp]).
+  ///
+  /// Throws:
+  ///   - [AppleSignInNotConfiguredException] (400) — provider not enabled
+  ///     in dashboard OAuth config for this environment.
+  ///   - [InvalidAppleTokenException] (401) — token signature, audience,
+  ///     expiry, replay, or nonce check failed server-side.
+  ///   - [UserDisabledException] (403) — account flag set to disabled.
+  ///   - [AppleEmailRequiredException] (400) — Apple did not return email
+  ///     for a new-account sign-in. Recovery: revoke this app's Apple ID
+  ///     access in iOS Settings.
+  ///   - [OAuthEmailConflictException] (409) — email matches existing
+  ///     user but auto-link rule blocked. Recovery: sign in with existing
+  ///     method, link from settings.
+  Future<KoolbaseUser> signInWithApple({
+    required String identityToken,
+    String? nonce,
+    AppleFullName? fullName,
+  }) async {
+    final session = await _api.signInWithApple(
+      identityToken: identityToken,
+      nonce: nonce,
+      fullName: fullName,
+    );
+    await _setSession(session);
+    return session.user;
+  }
+
   /// Log the user out.
   ///
   /// The local session is **always cleared**, regardless of whether the

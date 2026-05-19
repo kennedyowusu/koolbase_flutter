@@ -128,3 +128,35 @@ class TokenRevokedException extends KoolbaseAuthException {
       : super('Session has been revoked, please log in again',
             code: 'token_revoked');
 }
+
+class AppleSignInNotConfiguredException extends KoolbaseAuthException {
+  const AppleSignInNotConfiguredException()
+      : super(
+          'Apple Sign-In is not configured for this environment',
+          code: 'apple_not_configured',
+        );
+}
+
+class InvalidAppleTokenException extends KoolbaseAuthException {
+  const InvalidAppleTokenException()
+      : super(
+          'Invalid Apple identity token',
+          code: 'invalid_apple_token',
+        );
+}
+
+class AppleEmailRequiredException extends KoolbaseAuthException {
+  const AppleEmailRequiredException()
+      : super(
+          'Apple did not return email for this sign-in. Revoke this app in iOS Settings → Apple ID and retry.',
+          code: 'apple_email_required',
+        );
+}
+
+class OAuthEmailConflictException extends KoolbaseAuthException {
+  const OAuthEmailConflictException()
+      : super(
+          'Email is already in use by another account. Sign in with your existing method and link Apple from settings.',
+          code: 'oauth_email_conflict',
+        );
+}

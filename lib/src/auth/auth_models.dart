@@ -147,3 +147,28 @@ class PhoneVerifyResult {
     );
   }
 }
+
+/// Apple's optional full-name structure returned only on a user's FIRST
+/// Sign in with Apple. Both fields nullable; subsequent sign-ins omit
+/// this entirely.
+///
+/// Pass to [KoolbaseAuthClient.signInWithApple] only on first sign-in.
+/// The server persists at link time and ignores on subsequent sign-ins
+/// (matches Apple's documented contract).
+class AppleFullName {
+  final String? givenName;
+  final String? familyName;
+
+  const AppleFullName({this.givenName, this.familyName});
+
+  Map<String, dynamic> toJson() {
+    final result = <String, dynamic>{};
+    if (givenName != null && givenName!.isNotEmpty) {
+      result['given_name'] = givenName;
+    }
+    if (familyName != null && familyName!.isNotEmpty) {
+      result['family_name'] = familyName;
+    }
+    return result;
+  }
+}
