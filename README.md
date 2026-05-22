@@ -19,7 +19,7 @@ Auth, database, storage, realtime, functions, feature flags, remote config, vers
 
 ```yaml
 dependencies:
-  koolbase_flutter: ^2.10.0
+  koolbase_flutter: ^3.0.0
 ```
 
 **4. Initialize before `runApp()`:**
@@ -147,6 +147,13 @@ await Koolbase.db.collection('posts').insert({
 // Query
 final records = await Koolbase.db.collection('posts').get();
 
+// Read fields off a record
+final posts = await Koolbase.db.collection('posts').get();
+for (final post in posts.records) {
+  print(post['title']);   // field access (shorthand for post.data['title'])
+  print(post.id);         // record id
+}
+
 // Filter
 final filtered = await Koolbase.db
     .collection('posts')
@@ -204,16 +211,34 @@ await Koolbase.storage.delete(bucket: 'avatars', path: 'user-123.jpg');
 
 ## Realtime
 
-```dart
-final subscription = Koolbase.realtime.on(
-  collection: 'messages',
-  onCreated: (record) => print('New: ${record.data}'),
-  onUpdated: (record) => print('Updated: ${record.data}'),
-  onDeleted: (record) => print('Deleted: ${record.id}'),
-);
+Subscribe to live changes on a collection. Records arrive in the flat shape — your fields are top-level; system metadata is under `$`-prefixed keys (`$id`, `$createdAt`, …).
 
-subscription.cancel();
+```dart
+// New records
+final sub = Koolbase.realtime.onRecordCreated(
+  projectId: 'your-project-id',
+  collection: 'messages',
+).listen((record) {
+  print('New message: ${record['text']}');
+});
+
+// Updated records
+Koolbase.realtime.onRecordUpdated(
+  projectId: 'your-project-id',
+  collection: 'messages',
+).listen((record) => print('Updated: ${record['text']}'));
+
+// Deleted records — the stream yields the deleted record's id
+Koolbase.realtime.onRecordDeleted(
+  projectId: 'your-project-id',
+  collection: 'messages',
+).listen((id) => print('Deleted: $id'));
+
+// Stop listening
+sub.cancel();
 ```
+
+For full event objects (type, channel, timestamp), use the lower-level `Koolbase.realtime.on(projectId: ..., collection: ...)`, which returns a `Stream<RealtimeEvent>`.
 
 ---
 

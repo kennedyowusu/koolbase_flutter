@@ -1,3 +1,34 @@
+# 3.0.0 — 2026-05-22
+
+### Breaking
+
+- **Flat record shape.** `KoolbaseRecord` no longer wraps your fields under a
+  `data` envelope. Your fields are now top-level, with system metadata in a
+  reserved `$`-prefixed namespace: `$id`, `$createdAt`, `$updatedAt`,
+  `$collection`, and `$createdBy` (when set).
+- Removed `KoolbaseRecord.projectId` and `KoolbaseRecord.collectionId` —
+  internal identifiers are no longer exposed on records.
+- Requires a Koolbase server on the flat record contract (shipped alongside
+  this release). Older servers return the legacy envelope and will not parse.
+
+### Added
+
+- `record['field']` — direct field access, shorthand for `record.data['field']`.
+- `record.collection` — the record's collection name.
+
+### Changed
+
+- Populated/related records (via `populate()`) and realtime payloads now use
+  the same flat `$`-shape as direct reads.
+- Offline cache (Drift) bumped to schema v2: stale read caches are cleared on
+  upgrade so they refetch in the new shape; pending offline writes are preserved.
+
+### Migration
+
+- Remove any `record.projectId` / `record.collectionId` usage — those fields
+  are gone.
+- `record.data['field']` still works; `record['field']` is the new shorthand.
+
 ## 2.11.0 — 2026-05-19
 
 ### Added
@@ -427,6 +458,7 @@ if (session != null) {
 ```
 
 ### Setup required
+
 Add `sign_in_with_apple` to your pubspec.yaml and configure your App ID in the Apple Developer portal.
 
 ## 2.4.0
@@ -440,6 +472,7 @@ Add `sign_in_with_apple` to your pubspec.yaml and configure your App ID in the A
 - Device ID automatically attached to token registration
 
 ### Usage
+
 ```dart
 // After obtaining FCM token from firebase_messaging
 final fcmToken = await FirebaseMessaging.instance.getToken();
@@ -458,6 +491,7 @@ await Koolbase.messaging.send(
 ```
 
 ### Setup required
+
 Add your FCM server key as a project secret named `FCM_SERVER_KEY` in the Koolbase dashboard.
 
 ## 2.3.1
@@ -482,6 +516,7 @@ Add your FCM server key as a project secret named `FCM_SERVER_KEY` in the Koolba
 - `KoolbaseConfig` extended with `analyticsEnabled` parameter (default: true)
 
 ### Usage
+
 ```dart
 // Auto screen tracking
 MaterialApp(
@@ -521,6 +556,7 @@ Koolbase.analytics.flush();
 - `KoolbaseScreenClient` abstract interface extended with `executeFlow()`
 
 ### Usage
+
 ```dart
 // In your bundle's flows.json
 {
@@ -561,6 +597,7 @@ if (result.hasEvent) {
 - Fixed: `KoolbaseCodePushScope.of(context)` moved to `didChangeDependencies` to avoid initState context restrictions
 
 ### Usage
+
 ```dart
 // Wrap your app with KoolbaseCodePushScope
 KoolbaseCodePushScope(
@@ -597,6 +634,7 @@ KoolbaseDynamicScreen(
 ### Migration from 1.x
 
 Add `codePushChannel` to your `KoolbaseConfig` if you want to subscribe to a specific channel:
+
 ```dart
 await Koolbase.initialize(KoolbaseConfig(
   publicKey: 'pk_live_xxx',
