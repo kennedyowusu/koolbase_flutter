@@ -173,6 +173,41 @@ await Koolbase.db.collection('posts').doc('record-id').update({'title': 'Updated
 await Koolbase.db.collection('posts').doc('record-id').delete();
 ```
 
+### Upsert
+
+Insert a record, or update the existing one matching a filter. The server
+decides: one match updates it, no match inserts (seeded with the match
+fields), more than one match errors.
+
+\`\`\`dart
+final result = await Koolbase.db.upsert(
+  collection: 'profiles',
+  match: {'user_id': userId},
+  data: {'weight_kg': 70},
+);
+
+print(result.created); // true if inserted, false if updated
+print(result.record.id);
+\`\`\`
+
+> Online-only: an upsert needs the server's view to decide insert vs update,
+> so unlike `insert` it isn't queued offline and throws on network failure.
+
+### Delete where
+
+Bulk-delete every record matching a filter. Returns the number deleted.
+
+\`\`\`dart
+final deleted = await Koolbase.db.deleteWhere(
+  collection: 'sessions',
+  filters: {'user_id': userId, 'status': 'expired'},
+);
+\`\`\`
+
+> A non-empty filter is required — Koolbase won't delete an entire collection.
+> The collection's delete rule applies; for `owner`/`scoped` rules the delete
+> is scoped to your own records. Online-only.
+
 ### Offline-first
 
 The SDK caches all reads locally using Drift. Queries return instantly from cache and refresh in the background. Writes are queued and synced automatically when online.
