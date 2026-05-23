@@ -1,4 +1,9 @@
-# 3.0.0 — 2026-05-22
+# 3.1.0
+
+  - Added `Koolbase.db.upsert(collection:, match:, data:)` — insert-or-update by a match filter; returns `KoolbaseUpsertResult { record, created }`. Online-only.
+  - Added `Koolbase.db.deleteWhere(collection:, filters:)` — bulk delete by filter; returns the number of records deleted. Online-only.
+
+## 3.0.0 — 2026-05-22
 
 ### Breaking
 
