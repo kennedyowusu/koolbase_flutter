@@ -1,11 +1,15 @@
-# 3.1.1 - 2026-05-23
+# 3.2.0 - 2026-05-24
 
-     - Docs: document `upsert` and `deleteWhere` in the README (no code changes).
+- Added `KoolbaseConflictException`, thrown by `insert`, `update`, and `upsert` when a write violates a collection's unique constraint (HTTP 409). Catch it to handle duplicates.
+
+## 3.1.1 - 2026-05-23
+
+- Docs: document `upsert` and `deleteWhere` in the README (no code changes).
 
 ## 3.1.0 - 2026-05-23
 
-  - Added `Koolbase.db.upsert(collection:, match:, data:)` — insert-or-update by a match filter; returns `KoolbaseUpsertResult { record, created }`. Online-only.
-  - Added `Koolbase.db.deleteWhere(collection:, filters:)` — bulk delete by filter; returns the number of records deleted. Online-only.
+- Added `Koolbase.db.upsert(collection:, match:, data:)` — insert-or-update by a match filter; returns `KoolbaseUpsertResult { record, created }`. Online-only.
+- Added `Koolbase.db.deleteWhere(collection:, filters:)` — bulk delete by filter; returns the number of records deleted. Online-only.
 
 ## 3.0.0 — 2026-05-22
 

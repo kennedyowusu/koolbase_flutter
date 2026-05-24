@@ -19,7 +19,7 @@ Auth, database, storage, realtime, functions, feature flags, remote config, vers
 
 ```yaml
 dependencies:
-  koolbase_flutter: ^3.1.1
+  koolbase_flutter: ^3.2.0
 ```
 
 **4. Initialize before `runApp()`:**
@@ -172,6 +172,18 @@ await Koolbase.db.collection('posts').doc('record-id').update({'title': 'Updated
 // Delete
 await Koolbase.db.collection('posts').doc('record-id').delete();
 ```
+
+### Handling unique-constraint conflicts
+
+  A write that would violate a unique constraint throws `KoolbaseConflictException`:
+
+  \`\`\`dart
+  try {
+    await Koolbase.db.collection('users').insert({'email': email});
+  } on KoolbaseConflictException {
+    showError('That email is already registered.');
+  }
+  \`\`\`
 
 ### Upsert
 
