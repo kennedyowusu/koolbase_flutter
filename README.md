@@ -19,7 +19,7 @@ Auth, database, storage, realtime, functions, feature flags, remote config, vers
 
 ```yaml
 dependencies:
-  koolbase_flutter: ^3.2.0
+  koolbase_flutter: ^3.3.0
 ```
 
 **4. Initialize before `runApp()`:**
@@ -175,15 +175,17 @@ await Koolbase.db.collection('posts').doc('record-id').delete();
 
 ### Handling unique-constraint conflicts
 
-  A write that would violate a unique constraint throws `KoolbaseConflictException`:
+A write that would violate a unique constraint throws `KoolbaseConflictException`:
 
-  \`\`\`dart
-  try {
-    await Koolbase.db.collection('users').insert({'email': email});
-  } on KoolbaseConflictException {
-    showError('That email is already registered.');
-  }
-  \`\`\`
+```dart
+try {
+  await Koolbase.db.collection('users').insert({'email': email});
+} on KoolbaseConflictException catch (e) {
+  showError('That ${e.field ?? 'value'} is already registered.');
+}
+```
+
+See [Error handling](#error-handling) for the full set of typed exceptions.
 
 ### Upsert
 
@@ -191,7 +193,7 @@ Insert a record, or update the existing one matching a filter. The server
 decides: one match updates it, no match inserts (seeded with the match
 fields), more than one match errors.
 
-\`\`\`dart
+```dart
 final result = await Koolbase.db.upsert(
   collection: 'profiles',
   match: {'user_id': userId},
@@ -200,7 +202,7 @@ final result = await Koolbase.db.upsert(
 
 print(result.created); // true if inserted, false if updated
 print(result.record.id);
-\`\`\`
+```
 
 > Online-only: an upsert needs the server's view to decide insert vs update,
 > so unlike `insert` it isn't queued offline and throws on network failure.
@@ -209,12 +211,12 @@ print(result.record.id);
 
 Bulk-delete every record matching a filter. Returns the number deleted.
 
-\`\`\`dart
+```dart
 final deleted = await Koolbase.db.deleteWhere(
   collection: 'sessions',
   filters: {'user_id': userId, 'status': 'expired'},
 );
-\`\`\`
+```
 
 > A non-empty filter is required — Koolbase won't delete an entire collection.
 > The collection's delete rule applies; for `owner`/`scoped` rules the delete
@@ -490,9 +492,57 @@ await Koolbase.messaging.send(
 
 ---
 
+## Error handling
+
+Koolbase throws typed exceptions you can catch to branch on what went wrong.
+The SDK selects the exception from the server's stable error `code`, so your
+handling doesn't depend on message text.
+
+### Database errors
+
+All data-layer failures extend `KoolbaseDataException` (which implements
+`Exception`), so you can catch them broadly or by specific type:
+
+| Exception | When |
+|---|---|
+| `KoolbaseConflictException` | A write violates a unique constraint (409). Exposes `.field` — the field that collided, when the server reports it. |
+| `KoolbaseNotFoundException` | The record or collection doesn't exist (404). |
+| `KoolbaseValidationException` | The request was rejected as invalid (400). |
+| `KoolbasePermissionException` | An access rule denied the operation (403). |
+| `KoolbaseRateLimitException` | The caller is being rate-limited (429). |
+
+```dart
+try {
+  await Koolbase.db.insert(
+    collection: 'users',
+    data: {'email': email},
+  );
+} on KoolbaseConflictException catch (e) {
+  // e.field is 'email' when the server reports which field clashed
+  showError('That ${e.field ?? 'value'} is already taken.');
+} on KoolbasePermissionException {
+  showError('You do not have permission to do that.');
+} on KoolbaseDataException catch (e) {
+  // Catch-all for any other data-layer error
+  showError(e.message);
+}
+```
+
+> `insert` only queues offline on a genuine network failure. A server-side
+> rejection (e.g. a unique conflict) surfaces immediately rather than being
+> silently queued.
+
+### Auth errors
+
+Auth methods throw `KoolbaseAuthException` subtypes — `InvalidCredentialsException`,
+`AccountLockedException`, `EmailAlreadyInUseException`, `OtpExpiredException`,
+and so on — also selected from the server's error `code`.
+
+---
+
 ## What's included
 
-- Authentication: email + password, Apple Sign-In, phone + OTP
+- Authentication: email + password, Apple Sign-In, Google Sign-In, phone + OTP
 - Database with offline-first cache (Drift), realtime subscriptions, populate for related records
 - Storage with download URLs and progress callbacks
 - Realtime subscriptions over WebSocket

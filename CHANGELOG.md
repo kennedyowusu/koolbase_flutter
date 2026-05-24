@@ -1,4 +1,20 @@
-# 3.2.0 - 2026-05-24
+## 3.3.0 - 2026-05-24
+
+- Auth exceptions are now selected from the server's stable error `code`
+  (with status/message fallback for older servers), retiring brittle message
+  string-matching.
+- New typed data-layer exceptions — `KoolbaseNotFoundException`,
+  `KoolbaseValidationException`, `KoolbasePermissionException`,
+  `KoolbaseRateLimitException` — plus a shared `KoolbaseDataException` base.
+  Database operations now throw these (code-first) instead of a generic
+  `Exception`.
+- `KoolbaseConflictException` now exposes the collided `field` when the
+  server reports it.
+- Fix: `insert` no longer queues a server-rejected write (e.g. a unique
+  conflict) as an offline write — 4xx rejections surface immediately; only
+  genuine network failures are queued.
+
+## 3.2.0 - 2026-05-24
 
 - Added `KoolbaseConflictException`, thrown by `insert`, `update`, and `upsert` when a write violates a collection's unique constraint (HTTP 409). Catch it to handle duplicates.
 
