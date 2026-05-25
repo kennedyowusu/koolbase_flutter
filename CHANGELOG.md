@@ -1,4 +1,14 @@
-## 3.3.0 - 2026-05-24
+# 4.0.0 - 2026-05-25
+
+### Breaking
+
+- Removed the `Koolbase.ota` client (`KoolbaseOtaClient`) and its models
+  (`OtaCheckResult`, `OtaProgress`, `OtaDownloadState`). Use `Koolbase.codePush`
+  for config/flag/directive overrides, or Koolbase Storage for shipping and
+  reading raw files. This consolidates onto a single bundle client — matching the
+  React Native SDK and the server, which already use code push exclusively.
+
+# 3.3.0 - 2026-05-24
 
 - Auth exceptions are now selected from the server's stable error `code`
   (with status/message fallback for older servers), retiring brittle message

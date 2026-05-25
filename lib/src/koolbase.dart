@@ -18,9 +18,7 @@ export 'rfw/rfw_models.dart' show KoolbaseRfwWidget;
 export 'code_push/flow_models.dart' show FlowResult;
 export 'code_push/bundle_model.dart';
 export 'code_push/runtime_override.dart';
-import 'ota/ota_client.dart';
 import 'functions/functions_client.dart';
-export 'ota/ota_models.dart';
 import 'storage/storage_client.dart';
 import 'database/database_client.dart';
 import 'database/offline/local_database.dart';
@@ -98,7 +96,6 @@ class Koolbase {
   static KoolbaseStorageClient? _storage;
   static KoolbaseDatabaseClient? _database;
   static KoolbaseRealtimeClient? _realtime;
-  static KoolbaseOtaClient? _ota;
   static KoolbaseFunctionsClient? _functions;
   static KoolbaseLocalDatabase? _localDb;
   static SyncEngine? _syncEngine;
@@ -191,12 +188,6 @@ class Koolbase {
       userAccessTokenProvider: () => _auth?.accessToken,
     );
 
-    // Initialize OTA client
-    _ota = KoolbaseOtaClient(
-      baseUrl: config.baseUrl,
-      publicKey: config.publicKey,
-    );
-
     // Initialize code push client
     _codePush = KoolbaseCodePushClient(
       baseUrl: config.baseUrl,
@@ -267,12 +258,6 @@ class Koolbase {
   static KoolbaseStorageClient get storage {
     _ensureInitialized();
     return _storage!;
-  }
-
-  /// Access the OTA updates client
-  static KoolbaseOtaClient get ota {
-    _ensureInitialized();
-    return _ota!;
   }
 
   /// Access the functions client

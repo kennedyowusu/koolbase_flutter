@@ -5,7 +5,7 @@
 
 Flutter SDK for [Koolbase](https://koolbase.com) — Backend as a Service built for mobile developers.
 
-Auth, database, storage, realtime, functions, feature flags, remote config, version enforcement, OTA updates, code push, server-driven UI, logic engine, analytics, and cloud messaging — one SDK, one `initialize()` call.
+Auth, database, storage, realtime, functions, feature flags, remote config, version enforcement, code push, server-driven UI, logic engine, analytics, and cloud messaging — one SDK, one `initialize()` call.
 
 ---
 
@@ -392,6 +392,7 @@ Koolbase.codePush.onDirective('force_logout_all', (value) {
   if (value == true) Koolbase.auth.logout();
 });
 ```
+> Need to ship raw files and read them yourself? Use [Storage](https://docs.koolbase.com/storage/overview) instead.
 
 ---
 
@@ -549,7 +550,6 @@ and so on — also selected from the server's error `code`.
 - Authenticated Dart functions (`ctx.auth` exposes the caller automatically)
 - Feature flags and remote config
 - Version enforcement (force update, soft update)
-- OTA updates for assets, configs, and JSON
 - Code push (config + flag overrides + directives, no store release)
 - Server-driven UI via Flutter's `rfw` — push new screens OTA
 - Logic engine (conditional flows as data, updatable OTA)
