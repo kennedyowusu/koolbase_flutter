@@ -1,4 +1,11 @@
-# 4.0.0 - 2026-05-25
+## 4.1.0
+
+- **Code Push — mandatory bundles.** The SDK now honors a bundle's `mandatory` flag (set from the dashboard or via `PATCH /mandatory`). When a mandatory bundle is staged for the next launch:
+  - `Koolbase.codePush.hasMandatoryUpdate` returns `true` — poll it on resume to gate your UI.
+  - The optional `onMandatoryUpdate` callback on `KoolbaseConfig` fires immediately with `MandatoryUpdateInfo(version, bundleId)`, so you can prompt the user to restart and apply the required update.
+- No breaking changes.
+
+## 4.0.0
 
 ### Breaking
 
@@ -12,7 +19,7 @@
   library-agnostic, so the SDK no longer pulls it. If your app uses Apple
   Sign-In, declare `sign_in_with_apple` in your own `pubspec.yaml`.
 
-# 3.3.0 - 2026-05-24
+# 3.3.0
 
 - Auth exceptions are now selected from the server's stable error `code`
   (with status/message fallback for older servers), retiring brittle message
@@ -28,20 +35,20 @@
   conflict) as an offline write — 4xx rejections surface immediately; only
   genuine network failures are queued.
 
-## 3.2.0 - 2026-05-24
+## 3.2.0
 
 - Added `KoolbaseConflictException`, thrown by `insert`, `update`, and `upsert` when a write violates a collection's unique constraint (HTTP 409). Catch it to handle duplicates.
 
-## 3.1.1 - 2026-05-23
+## 3.1.1
 
 - Docs: document `upsert` and `deleteWhere` in the README (no code changes).
 
-## 3.1.0 - 2026-05-23
+## 3.1.0
 
 - Added `Koolbase.db.upsert(collection:, match:, data:)` — insert-or-update by a match filter; returns `KoolbaseUpsertResult { record, created }`. Online-only.
 - Added `Koolbase.db.deleteWhere(collection:, filters:)` — bulk delete by filter; returns the number of records deleted. Online-only.
 
-## 3.0.0 — 2026-05-22
+## 3.0.0
 
 ### Breaking
 
@@ -72,7 +79,7 @@
   are gone.
 - `record.data['field']` still works; `record['field']` is the new shorthand.
 
-## 2.11.0 — 2026-05-19
+## 2.11.0
 
 ### Added
 
@@ -149,7 +156,7 @@ Client IDs. You'll need one per platform (iOS, Android, web).
   feature inventory.
 - Bumped install snippet from `^2.8.0` to `^2.10.0`.
 
-# 2.10.0 — 2026-05-19
+# 2.10.0
 
 ## ✨ New features
 

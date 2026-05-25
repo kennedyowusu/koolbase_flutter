@@ -358,20 +358,6 @@ switch (result.status) {
 
 ---
 
-## OTA Updates
-
-```dart
-final result = await Koolbase.ota.initialize(channel: 'production');
-
-// Read a JSON file from the active bundle
-final config = await Koolbase.ota.readJson('config.json');
-
-// Get path to a bundled asset
-final path = await Koolbase.ota.getFilePath('banner.png');
-```
-
----
-
 ## Code Push
 
 Push config overrides, feature flag overrides, and UI updates to your app without a store release.
@@ -391,6 +377,29 @@ final enabled = Koolbase.isEnabled('new_checkout_flow');
 Koolbase.codePush.onDirective('force_logout_all', (value) {
   if (value == true) Koolbase.auth.logout();
 });
+
+### Mandatory updates
+
+Mark a bundle **mandatory** in the dashboard (or via `PATCH /mandatory`) when every device must apply it before continuing. The SDK surfaces it two ways — a push callback and a pollable flag:
+
+```dart
+await Koolbase.initialize(KoolbaseConfig(
+  publicKey: 'pk_live_xxxx',
+  baseUrl: 'https://api.koolbase.com',
+  // Fires the moment a mandatory bundle is staged for the next launch
+  onMandatoryUpdate: (info) {
+    showRestartRequiredDialog(version: info.version);
+  },
+));
+
+// Or poll it — e.g. when the app resumes — before letting the user proceed
+if (Koolbase.codePush.hasMandatoryUpdate) {
+  showRestartRequiredDialog();
+}
+```
+
+A mandatory bundle still activates on the next cold launch like any other; the callback and flag just let you prompt the user to restart now instead of waiting.
+
 ```
 > Need to ship raw files and read them yourself? Use [Storage](https://docs.koolbase.com/storage/overview) instead.
 

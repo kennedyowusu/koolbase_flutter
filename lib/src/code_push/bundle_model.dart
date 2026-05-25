@@ -127,6 +127,7 @@ class BundleRef {
   final String checksum;
   final String signature;
   final int sizeBytes;
+  final bool mandatory;
 
   const BundleRef({
     required this.bundleId,
@@ -135,6 +136,7 @@ class BundleRef {
     required this.checksum,
     required this.signature,
     required this.sizeBytes,
+    this.mandatory = false,
   });
 
   factory BundleRef.fromJson(Map<String, dynamic> json) {
@@ -145,6 +147,17 @@ class BundleRef {
       checksum: json['checksum'] as String,
       signature: json['signature'] as String,
       sizeBytes: json['size_bytes'] as int,
+      mandatory: json['mandatory'] as bool? ?? false,
     );
   }
 }
+
+/// Passed to [KoolbaseConfig.onMandatoryUpdate] when a mandatory bundle has
+/// been staged and is awaiting application on the next cold launch.
+class MandatoryUpdateInfo {
+  final int version;
+  final String bundleId;
+  const MandatoryUpdateInfo({required this.version, required this.bundleId});
+}
+
+typedef MandatoryUpdateCallback = void Function(MandatoryUpdateInfo info);

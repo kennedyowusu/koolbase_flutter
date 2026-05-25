@@ -14,6 +14,7 @@ class KoolbaseCodePushClient implements KoolbaseScreenClient {
   final String baseUrl;
   final String apiKey;
   final String channel;
+  final MandatoryUpdateCallback? onMandatoryUpdate;
 
   late final BundleCache _cache;
   late final KoolbaseUpdater _updater;
@@ -21,6 +22,7 @@ class KoolbaseCodePushClient implements KoolbaseScreenClient {
   final RuntimeOverrideEngine _override = RuntimeOverrideEngine();
 
   BundleManifest? _activeManifest;
+  bool _mandatoryPending = false;
   bool _initialized = false;
   late final ScreenResolver _screenResolver;
 
@@ -30,11 +32,17 @@ class KoolbaseCodePushClient implements KoolbaseScreenClient {
     required this.baseUrl,
     required this.apiKey,
     this.channel = 'stable',
+    this.onMandatoryUpdate,
   });
 
   RuntimeOverrideEngine get override => _override;
   BundleManifest? get activeManifest => _activeManifest;
   bool get hasActiveBundle => _activeManifest != null;
+
+  /// True when a mandatory bundle has been staged this session and is awaiting
+  /// application on the next cold launch. Gate your UI on this to prompt the
+  /// user to restart so the required update takes effect.
+  bool get hasMandatoryUpdate => _mandatoryPending;
 
   Future<void> init({
     required String appVersion,
@@ -105,6 +113,21 @@ class KoolbaseCodePushClient implements KoolbaseScreenClient {
       switch (result.status) {
         case UpdaterStatus.readyOnNextLaunch:
           debugPrint('$_tag update downloaded — will activate on next launch');
+          if (result.bundle?.mandatory ?? false) {
+            _mandatoryPending = true;
+            debugPrint('$_tag staged bundle is mandatory — notifying app');
+            final cb = onMandatoryUpdate;
+            if (cb != null) {
+              try {
+                cb(MandatoryUpdateInfo(
+                  version: result.bundle!.version,
+                  bundleId: result.bundle!.bundleId,
+                ));
+              } catch (e) {
+                debugPrint('$_tag onMandatoryUpdate handler threw: $e');
+              }
+            }
+          }
           break;
         case UpdaterStatus.rollback:
           debugPrint('$_tag rollback to v${result.revertTo} on next launch');

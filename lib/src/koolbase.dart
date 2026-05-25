@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'auth/auth_api.dart';
 import 'code_push/code_push_client.dart';
+import 'code_push/bundle_model.dart';
 import 'analytics/analytics_client.dart';
 import 'messaging/messaging_client.dart';
 export 'messaging/messaging_client.dart'
@@ -53,6 +54,12 @@ class KoolbaseConfig {
   /// The code push channel to subscribe to (default: stable)
   final String codePushChannel;
 
+  /// Optional callback fired when a *mandatory* code-push bundle has been
+  /// staged and is awaiting application on the next cold launch. Use it to
+  /// prompt the user to restart so the required update takes effect. The
+  /// SDK also exposes `Koolbase.codePush.hasMandatoryUpdate` for polling.
+  final MandatoryUpdateCallback? onMandatoryUpdate;
+
   /// Custom rfw widgets to register beyond the defaults
   final List<KoolbaseRfwWidget> rfwWidgets;
 
@@ -81,6 +88,7 @@ class KoolbaseConfig {
     required this.baseUrl,
     this.refreshInterval = const Duration(seconds: 60),
     this.codePushChannel = 'stable',
+    this.onMandatoryUpdate,
     this.rfwWidgets = const [],
     this.analyticsEnabled = true,
     this.messagingEnabled = true,
@@ -193,6 +201,7 @@ class Koolbase {
       baseUrl: config.baseUrl,
       apiKey: config.publicKey,
       channel: config.codePushChannel,
+      onMandatoryUpdate: config.onMandatoryUpdate,
     );
 
     await _codePush!.init(

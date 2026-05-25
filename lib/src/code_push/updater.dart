@@ -39,14 +39,13 @@ class KoolbaseUpdater {
         },
       );
 
-      final res = await http
-          .get(uri, headers: {'x-api-key': apiKey})
-          .timeout(const Duration(seconds: 10));
+      final res = await http.get(uri,
+          headers: {'x-api-key': apiKey}).timeout(const Duration(seconds: 10));
 
       if (res.statusCode != 200) return UpdaterResult.noUpdate();
 
-      final body = CheckResponse.fromJson(
-          jsonDecode(res.body) as Map<String, dynamic>);
+      final body =
+          CheckResponse.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
 
       switch (body.status) {
         case 'update_available':
@@ -103,7 +102,7 @@ class KoolbaseUpdater {
       );
 
       debugPrint('$_tag bundle v${ref.version} ready for next launch');
-      return UpdaterResult.readyOnNextLaunch();
+      return UpdaterResult.readyOnNextLaunch(bundle: ref);
     } catch (e) {
       debugPrint('$_tag download error: $e');
       await cache.delete(CacheSlot.pending, ref.bundleId);
@@ -134,14 +133,15 @@ enum UpdaterStatus { noUpdate, readyOnNextLaunch, rollback }
 class UpdaterResult {
   final UpdaterStatus status;
   final int? revertTo;
+  final BundleRef? bundle;
 
-  const UpdaterResult._({required this.status, this.revertTo});
+  const UpdaterResult._({required this.status, this.revertTo, this.bundle});
 
   factory UpdaterResult.noUpdate() =>
       const UpdaterResult._(status: UpdaterStatus.noUpdate);
 
-  factory UpdaterResult.readyOnNextLaunch() =>
-      const UpdaterResult._(status: UpdaterStatus.readyOnNextLaunch);
+  factory UpdaterResult.readyOnNextLaunch({BundleRef? bundle}) =>
+      UpdaterResult._(status: UpdaterStatus.readyOnNextLaunch, bundle: bundle);
 
   factory UpdaterResult.rollback({required int revertTo}) =>
       UpdaterResult._(status: UpdaterStatus.rollback, revertTo: revertTo);
