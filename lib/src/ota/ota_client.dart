@@ -7,6 +7,8 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'ota_models.dart';
+import 'dart:math';
+import 'package:package_info_plus/package_info_plus.dart';
 
 /// Manages OTA bundle downloads and applies them to the app's local storage.
 ///
@@ -29,6 +31,7 @@ class KoolbaseOtaClient {
   static const _prefVersionKey = 'koolbase_ota_version';
   static const _prefChecksumKey = 'koolbase_ota_checksum';
   static const _bundleDirName = 'koolbase_ota_bundle';
+  static const _prefDeviceIdKey = 'koolbase_ota_device_id';
 
   KoolbaseOtaClient({
     required String baseUrl,
@@ -53,11 +56,23 @@ class KoolbaseOtaClient {
   /// Returns [OtaCheckResult.noUpdate] if no newer bundle exists or on error.
   Future<OtaCheckResult> check({String channel = 'production'}) async {
     try {
+      final platform = _platformName();
+      if (platform == null) {
+        // code-push only targets ios/android
+        return OtaCheckResult.noUpdate();
+      }
+
       final version = await currentVersion;
-      final uri = Uri.parse('$_baseUrl/v1/sdk/ota/check').replace(
+      final deviceId = await _deviceId();
+      final appVersion = await _appVersion();
+
+      final uri = Uri.parse('$_baseUrl/v1/code-push/check').replace(
         queryParameters: {
+          'app_version': appVersion,
+          'platform': platform,
           'channel': channel,
-          'version': version.toString(),
+          'device_id': deviceId,
+          'current_bundle': version.toString(),
         },
       );
 
@@ -147,7 +162,8 @@ class KoolbaseOtaClient {
         progress: 1.0,
       ));
 
-      debugPrint('[Koolbase OTA] Bundle v${result.version} applied successfully');
+      debugPrint(
+          '[Koolbase OTA] Bundle v${result.version} applied successfully');
       return true;
     } catch (e) {
       debugPrint('[Koolbase OTA] Download/extract failed: $e');
@@ -169,7 +185,17 @@ class KoolbaseOtaClient {
     String channel = 'production',
     void Function(OtaProgress)? onProgress,
   }) async {
-    final result = await check(channel: channel);
+    var result = await check(channel: channel);
+
+    // Our current bundle was recalled — drop to the built-in assets, then
+    // re-check (current_bundle is now 0) to pick up the reverted-to version.
+    if (result.isRollback) {
+      debugPrint(
+        '[Koolbase OTA] Bundle recalled — reverting to v${result.revertTo}, clearing local bundle',
+      );
+      await clearBundle();
+      result = await check(channel: channel);
+    }
 
     if (!result.hasUpdate) return result;
 
@@ -231,6 +257,37 @@ class KoolbaseOtaClient {
   }
 
   // ─── Private Helpers ───────────────────────────────────────────────────────
+
+  /// codepush only serves ios/android bundles. Returns null on other platforms.
+  String? _platformName() {
+    if (Platform.isIOS) return 'ios';
+    if (Platform.isAndroid) return 'android';
+    return null;
+  }
+
+  /// The host app's version (e.g. "1.2.3"), used for app-version targeting.
+  Future<String> _appVersion() async {
+    final info = await PackageInfo.fromPlatform();
+    return info.version;
+  }
+
+  /// A stable per-install device id for server-side rollout bucketing.
+  /// Generated once, persisted, no PII.
+  Future<String> _deviceId() async {
+    final prefs = await SharedPreferences.getInstance();
+    var id = prefs.getString(_prefDeviceIdKey);
+    if (id == null || id.isEmpty) {
+      id = _generateDeviceId();
+      await prefs.setString(_prefDeviceIdKey, id);
+    }
+    return id;
+  }
+
+  String _generateDeviceId() {
+    final rnd = Random.secure();
+    final bytes = List<int>.generate(16, (_) => rnd.nextInt(256));
+    return bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+  }
 
   Future<Directory> _getBundleDir() async {
     final docDir = await getApplicationDocumentsDirectory();

@@ -3,6 +3,13 @@ class OtaCheckResult {
   /// Whether a newer bundle is available.
   final bool hasUpdate;
 
+  /// Whether the server asked the device to roll back (its current bundle
+  /// was recalled). When true, [revertTo] holds the version to fall back to.
+  final bool isRollback;
+
+  /// The version to revert to when [isRollback] is true. Null otherwise.
+  final int? revertTo;
+
   /// The version number of the available bundle. Null if no update.
   final int? version;
 
@@ -23,6 +30,8 @@ class OtaCheckResult {
 
   const OtaCheckResult({
     required this.hasUpdate,
+    this.isRollback = false,
+    this.revertTo,
     this.version,
     this.checksum,
     this.mandatory = false,
@@ -33,21 +42,47 @@ class OtaCheckResult {
 
   factory OtaCheckResult.noUpdate() => const OtaCheckResult(hasUpdate: false);
 
+  /// Parses the Koolbase code-push check response.
+  ///
+  ///   {"status":"update_available","bundle":{...}}
+  ///   {"status":"rollback","revert_to":"3"}
+  ///   {"status":"no_update"}
   factory OtaCheckResult.fromJson(Map<String, dynamic> json) {
-    return OtaCheckResult(
-      hasUpdate: json['has_update'] as bool? ?? false,
-      version: json['version'] as int?,
-      checksum: json['checksum'] as String?,
-      mandatory: json['mandatory'] as bool? ?? false,
-      downloadUrl: json['download_url'] as String?,
-      releaseNotes: json['release_notes'] as String?,
-      fileSize: json['file_size'] as int?,
-    );
+    final status = json['status'] as String?;
+
+    if (status == 'update_available') {
+      final bundle = json['bundle'] as Map<String, dynamic>? ?? const {};
+      return OtaCheckResult(
+        hasUpdate: true,
+        version: bundle['version'] as int?,
+        checksum: bundle['checksum'] as String?,
+        mandatory: bundle['mandatory'] as bool? ?? false,
+        downloadUrl: bundle['download_url'] as String?,
+        releaseNotes: bundle['release_notes'] as String?,
+        fileSize: bundle['size_bytes'] as int?,
+      );
+    }
+
+    if (status == 'rollback') {
+      final raw = json['revert_to'];
+      final revertTo = raw is int ? raw : int.tryParse(raw?.toString() ?? '');
+      return OtaCheckResult(
+          hasUpdate: false, isRollback: true, revertTo: revertTo);
+    }
+
+    return OtaCheckResult.noUpdate();
   }
 }
 
 /// State of the OTA download progress.
-enum OtaDownloadState { idle, downloading, verifying, extracting, ready, failed }
+enum OtaDownloadState {
+  idle,
+  downloading,
+  verifying,
+  extracting,
+  ready,
+  failed
+}
 
 /// Progress event emitted during bundle download and extraction.
 class OtaProgress {
