@@ -288,33 +288,6 @@ class AuthApi {
     );
   }
 
-  /// **DEPRECATED.** The server-side `/v1/sdk/auth/oauth` endpoint for
-  /// end-user OAuth (Google, GitHub) does not yet exist. The previous
-  /// implementation incorrectly targeted `/v1/auth/oauth`, which is the
-  /// dashboard's developer OAuth handler — not a customer-app surface.
-  ///
-  /// This method is retained as a stub to preserve the call surface. It
-  /// will be properly implemented in v2.10.x once the server endpoint
-  /// ships. For Sign in with Apple, use [KoolbaseAppleAuth.signIn] —
-  /// that flow uses a different server endpoint and works today.
-  @Deprecated(
-      'End-user OAuth server endpoint not yet shipped. Use email/password '
-      'or KoolbaseAppleAuth.signIn for now. Tracking: v2.10.x.')
-  Future<Map<String, dynamic>> oauthLogin({
-    required String provider,
-    required String token,
-    String email = '',
-    String name = '',
-    String avatarUrl = '',
-  }) async {
-    throw UnimplementedError(
-      'AuthApi.oauthLogin is not yet supported. The server-side '
-      '/v1/sdk/auth/oauth endpoint is on the roadmap for v2.10.x. For now, '
-      'use email/password authentication or KoolbaseAppleAuth.signIn for '
-      'Sign in with Apple.',
-    );
-  }
-
   Future<OtpSendResult> sendOtp({required String phoneNumber}) async {
     final res = await _client
         .post(

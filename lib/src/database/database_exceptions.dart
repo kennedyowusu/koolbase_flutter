@@ -43,9 +43,9 @@ class KoolbaseConflictException extends KoolbaseDataException {
   final String? field;
 
   const KoolbaseConflictException([
-    String message = 'Value violates a unique constraint',
+    super.message = 'Value violates a unique constraint',
     this.field,
-  ]) : super(message, code: 'unique_violation');
+  ]) : super(code: 'unique_violation');
 
   @override
   String toString() =>
@@ -57,8 +57,8 @@ class KoolbaseConflictException extends KoolbaseDataException {
 /// `collection_not_found`.
 class KoolbaseNotFoundException extends KoolbaseDataException {
   const KoolbaseNotFoundException([
-    String message = 'The requested resource was not found',
-  ]) : super(message, code: 'not_found');
+    super.message = 'The requested resource was not found',
+  ]) : super(code: 'not_found');
 
   @override
   String toString() => 'KoolbaseNotFoundException: $message';
@@ -68,8 +68,8 @@ class KoolbaseNotFoundException extends KoolbaseDataException {
 /// 400 and code `validation_error` (e.g. a malformed body or a bad field).
 class KoolbaseValidationException extends KoolbaseDataException {
   const KoolbaseValidationException([
-    String message = 'The request was invalid',
-  ]) : super(message, code: 'validation_error');
+    super.message = 'The request was invalid',
+  ]) : super(code: 'validation_error');
 
   @override
   String toString() => 'KoolbaseValidationException: $message';
@@ -80,8 +80,8 @@ class KoolbaseValidationException extends KoolbaseDataException {
 /// (typically a collection access rule rejecting the write/read).
 class KoolbasePermissionException extends KoolbaseDataException {
   const KoolbasePermissionException([
-    String message = 'You do not have permission to perform this action',
-  ]) : super(message, code: 'permission_denied');
+    super.message = 'You do not have permission to perform this action',
+  ]) : super(code: 'permission_denied');
 
   @override
   String toString() => 'KoolbasePermissionException: $message';
@@ -91,8 +91,8 @@ class KoolbasePermissionException extends KoolbaseDataException {
 /// `rate_limit`. Back off and retry after a short delay.
 class KoolbaseRateLimitException extends KoolbaseDataException {
   const KoolbaseRateLimitException([
-    String message = 'Too many requests, please slow down',
-  ]) : super(message, code: 'rate_limit');
+    super.message = 'Too many requests, please slow down',
+  ]) : super(code: 'rate_limit');
 
   @override
   String toString() => 'KoolbaseRateLimitException: $message';

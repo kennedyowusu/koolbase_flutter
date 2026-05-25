@@ -3,10 +3,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:koolbase_flutter/koolbase_flutter.dart';
-import 'database_models.dart';
 import 'offline/cache_store.dart';
 import 'offline/write_queue.dart';
-import 'database_models.dart';
 
 /// Broadcast stream controller for background refresh notifications
 /// Keyed by collection name

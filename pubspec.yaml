@@ -12,7 +12,6 @@ dependencies:
   flutter:
     sdk: flutter
   http: ^1.2.0
-  sign_in_with_apple: ^7.0.1
   flutter_secure_storage: ^10.0.0
   shared_preferences: ^2.2.0
   archive: ^4.0.9

@@ -135,14 +135,3 @@ class SecureAuthStorage implements KoolbaseAuthStorage {
     await _storage.delete(key: 'koolbase_refresh_token');
   }
 }
-
-/// Deprecated legacy alias for [SecureAuthStorage]. Existed in SDK versions
-/// up to v2.8.0 with a different (refresh-token-only) interface. Kept as a
-/// no-op import shim to prevent compile errors on direct callers.
-///
-/// **Migration:** if you were constructing `AuthStorage()` directly, replace
-/// with `SecureAuthStorage()`. The signature is identical at the call site.
-@Deprecated('Use SecureAuthStorage instead. Will be removed in v3.0.0.')
-class AuthStorage extends SecureAuthStorage {
-  AuthStorage({super.storage});
-}
