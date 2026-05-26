@@ -19,7 +19,7 @@ Auth, database, storage, realtime, functions, feature flags, remote config, vers
 
 ```yaml
 dependencies:
-  koolbase_flutter: ^4.0.0
+  koolbase_flutter: ^5.0.0
 ```
 
 **4. Initialize before `runApp()`:**
@@ -135,6 +135,13 @@ Configure your SMS provider (Twilio, Africa's Talking, or Hubtel) in the dashboa
 
 ---
 
+> **Auth is automatic (v5+).** Database, storage, and functions calls
+> authenticate as the currently signed-in user — nothing to pass, no manual
+> wiring. Log in (or restore a session) and every data-plane request carries
+> that identity. `owner`/`authenticated` collections require an active session.
+
+---
+
 ## Database
 
 ```dart
@@ -243,7 +250,6 @@ await Koolbase.storage.upload(
   bucket: 'avatars',
   path: 'user-123.jpg',
   file: file,
-  onProgress: (p) => print('${p.percentage}%'),
 );
 
 // Get download URL

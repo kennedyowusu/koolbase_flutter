@@ -1,3 +1,23 @@
+# 5.0.0
+
+### BREAKING — security
+
+- Data-plane requests (database, storage, functions, offline sync)
+  authenticate with the signed-in user's access token (Authorization: Bearer)
+  instead of the x-user-id header. The header is no longer sent or trusted.
+  Requires the matching Koolbase server build.
+- KoolbaseStorageClient.upload() no longer accepts a `userId` parameter —
+  identity comes from the active session automatically.
+- End-user identity now flows automatically from Koolbase.auth; manual
+  Koolbase.db.setUserId(...) is no longer needed for auth (it remains only for
+  tagging offline-cached records).
+
+### Added
+
+- KoolbaseAuthClient.validAccessToken() — returns a currently-valid token,
+  refreshing (single-flight) near expiry; data-plane clients pull from it per
+  request so identity follows the live session.
+
 ## 4.1.0
 
 - **Code Push — mandatory bundles.** The SDK now honors a bundle's `mandatory` flag (set from the dashboard or via `PATCH /mandatory`). When a mandatory bundle is staged for the next launch:
