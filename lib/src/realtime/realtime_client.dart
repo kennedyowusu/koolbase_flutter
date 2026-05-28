@@ -6,11 +6,13 @@ import 'realtime_models.dart';
 class KoolbaseRealtimeClient {
   final String baseUrl;
   final String publicKey;
+  final Future<String?> Function() accessTokenProvider;
 
   String? _token;
   WebSocketChannel? _channel;
   Timer? _reconnectTimer;
   bool _disposed = false;
+  bool _connecting = false;
 
   final Map<String, StreamController<RealtimeEvent>> _controllers = {};
   final Set<String> _subscriptions = {};
@@ -22,20 +24,11 @@ class KoolbaseRealtimeClient {
   KoolbaseRealtimeClient({
     required this.baseUrl,
     required this.publicKey,
+    required this.accessTokenProvider,
   });
 
   /// Stream of connection state — true = connected, false = disconnected
   Stream<bool> get connectionState => _connectionController.stream;
-
-  /// Set the user access token for authenticated subscriptions
-  void setToken(String? token) {
-    _token = token;
-    if (token != null && _channel == null) {
-      _connect();
-    } else if (token == null) {
-      _disconnect();
-    }
-  }
 
   String get _wsUrl {
     final base = baseUrl
@@ -44,13 +37,23 @@ class KoolbaseRealtimeClient {
     return '$base/v1/realtime/ws?token=$_token';
   }
 
-  void _connect() {
-    if (_token == null || _disposed) return;
+  Future<void> _connect() async {
+    if (_disposed || _connecting || _channel != null) return;
+    _connecting = true;
+
+    final token = await accessTokenProvider();
+    if (token == null || _disposed) {
+      _connecting = false;
+      _scheduleReconnect(); // sign-in may be in flight; retry while subscribed
+      return;
+    }
+    _token = token;
 
     try {
       _channel = WebSocketChannel.connect(Uri.parse(_wsUrl));
+      _connecting = false;
 
-      // Fix: send subscriptions after connection stabilizes
+      // Re-subscribe everything once the socket is up.
       Future.microtask(() {
         if (_disposed || _channel == null) return;
         _connectionController.add(true);
@@ -85,22 +88,16 @@ class KoolbaseRealtimeClient {
         cancelOnError: true,
       );
     } catch (e) {
+      _connecting = false;
       _scheduleReconnect();
     }
   }
 
-  void _disconnect() {
-    _reconnectTimer?.cancel();
-    _channel?.sink.close();
-    _channel = null;
-    _connectionController.add(false);
-  }
-
   void _scheduleReconnect() {
-    if (_disposed || _token == null) return;
+    if (_disposed || _subscriptions.isEmpty) return;
     _reconnectTimer?.cancel();
     _reconnectTimer = Timer(const Duration(seconds: 3), () {
-      if (!_disposed && _token != null) _connect();
+      if (!_disposed) _connect();
     });
   }
 
@@ -154,7 +151,7 @@ class KoolbaseRealtimeClient {
       _subscriptions.add(channelKey);
       if (_channel != null) {
         _sendSubscribe(projectId, collection);
-      } else if (_token != null) {
+      } else {
         _connect();
       }
     }

@@ -159,6 +159,8 @@ class Koolbase {
     _realtime = KoolbaseRealtimeClient(
       baseUrl: config.baseUrl,
       publicKey: config.publicKey,
+      accessTokenProvider: () =>
+          _auth?.validAccessToken() ?? Future<String?>.value(null),
     );
 
     // Initialize offline database (Drift)
