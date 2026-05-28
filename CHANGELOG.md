@@ -1,3 +1,9 @@
+## 6.0.0
+
+### Breaking
+
+- `Koolbase.realtime.on` / `onRecordCreated` / `onRecordUpdated` / `onRecordDeleted` no longer take a `projectId` — the project is derived from your session token, matching the React Native SDK. Migrate `on(projectId: ..., collection: 'x')` to `on(collection: 'x')`.
+
 # 5.1.0
 
 ### Fixed

@@ -9,11 +9,13 @@ class KoolbaseRealtimeClient {
   final Future<String?> Function() accessTokenProvider;
 
   String? _token;
+  String? _projectId; // derived from the session token
   WebSocketChannel? _channel;
   Timer? _reconnectTimer;
   bool _disposed = false;
   bool _connecting = false;
 
+  // Keyed by collection — one user session means one project.
   final Map<String, StreamController<RealtimeEvent>> _controllers = {};
   final Set<String> _subscriptions = {};
   final Map<String, int> _subscriberCount = {};
@@ -27,7 +29,6 @@ class KoolbaseRealtimeClient {
     required this.accessTokenProvider,
   });
 
-  /// Stream of connection state — true = connected, false = disconnected
   Stream<bool> get connectionState => _connectionController.stream;
 
   String get _wsUrl {
@@ -37,6 +38,28 @@ class KoolbaseRealtimeClient {
     return '$base/v1/realtime/ws?token=$_token';
   }
 
+  /// Extracts the project_id claim from a Koolbase session JWT.
+  static String? _projectIdFromToken(String token) {
+    try {
+      final parts = token.split('.');
+      if (parts.length < 2) return null;
+      var payload = parts[1].replaceAll('-', '+').replaceAll('_', '/');
+      switch (payload.length % 4) {
+        case 2:
+          payload += '==';
+          break;
+        case 3:
+          payload += '=';
+          break;
+      }
+      final map = jsonDecode(utf8.decode(base64.decode(payload)))
+          as Map<String, dynamic>;
+      return map['project_id'] as String?;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> _connect() async {
     if (_disposed || _connecting || _channel != null) return;
     _connecting = true;
@@ -44,24 +67,26 @@ class KoolbaseRealtimeClient {
     final token = await accessTokenProvider();
     if (token == null || _disposed) {
       _connecting = false;
-      _scheduleReconnect(); // sign-in may be in flight; retry while subscribed
+      _scheduleReconnect();
       return;
     }
     _token = token;
+    _projectId = _projectIdFromToken(token);
+    if (_projectId == null) {
+      _connecting = false;
+      _scheduleReconnect();
+      return;
+    }
 
     try {
       _channel = WebSocketChannel.connect(Uri.parse(_wsUrl));
       _connecting = false;
 
-      // Re-subscribe everything once the socket is up.
       Future.microtask(() {
         if (_disposed || _channel == null) return;
         _connectionController.add(true);
-        for (final channel in _subscriptions) {
-          final parts = channel.split(':');
-          if (parts.length == 2) {
-            _sendSubscribe(parts[0], parts[1]);
-          }
+        for (final collection in _subscriptions) {
+          _sendSubscribe(collection);
         }
       });
 
@@ -101,92 +126,80 @@ class KoolbaseRealtimeClient {
     });
   }
 
-  void _sendSubscribe(String projectId, String collection) {
+  void _sendSubscribe(String collection) {
+    final pid = _projectId;
+    if (pid == null) return;
     _channel?.sink.add(jsonEncode({
       'action': 'subscribe',
-      'project_id': projectId,
+      'project_id': pid,
       'collection': collection,
     }));
   }
 
-  void _sendUnsubscribe(String projectId, String collection) {
+  void _sendUnsubscribe(String collection) {
+    final pid = _projectId;
+    if (pid == null) return;
     _channel?.sink.add(jsonEncode({
       'action': 'unsubscribe',
-      'project_id': projectId,
+      'project_id': pid,
       'collection': collection,
     }));
   }
 
   void _dispatch(RealtimeEvent event) {
-    final channel = event.channel ?? '';
-    _controllers[channel]?.add(event);
+    final collection = event.collection; // from payload; null on acks/errors
+    if (collection == null) return;
+    _controllers[collection]?.add(event);
   }
 
-  /// Subscribe to a collection — returns a stream of realtime events
-  Stream<RealtimeEvent> on({
-    required String projectId,
-    required String collection,
-  }) {
-    final channelKey = '$projectId:$collection';
-
-    if (!_controllers.containsKey(channelKey)) {
-      _controllers[channelKey] = StreamController<RealtimeEvent>.broadcast(
+  /// Subscribe to a collection — returns a stream of realtime events.
+  /// The project is taken from the signed-in user's session.
+  Stream<RealtimeEvent> on({required String collection}) {
+    if (!_controllers.containsKey(collection)) {
+      _controllers[collection] = StreamController<RealtimeEvent>.broadcast(
         onCancel: () {
-          _subscriberCount[channelKey] =
-              (_subscriberCount[channelKey] ?? 1) - 1;
-
-          if ((_subscriberCount[channelKey] ?? 0) <= 0) {
-            _subscriptions.remove(channelKey);
-            _sendUnsubscribe(projectId, collection);
-            _controllers.remove(channelKey)?.close();
-            _subscriberCount.remove(channelKey);
+          _subscriberCount[collection] =
+              (_subscriberCount[collection] ?? 1) - 1;
+          if ((_subscriberCount[collection] ?? 0) <= 0) {
+            _subscriptions.remove(collection);
+            _sendUnsubscribe(collection);
+            _controllers.remove(collection)?.close();
+            _subscriberCount.remove(collection);
           }
         },
       );
     }
 
-    _subscriberCount[channelKey] = (_subscriberCount[channelKey] ?? 0) + 1;
+    _subscriberCount[collection] = (_subscriberCount[collection] ?? 0) + 1;
 
-    if (!_subscriptions.contains(channelKey)) {
-      _subscriptions.add(channelKey);
-      if (_channel != null) {
-        _sendSubscribe(projectId, collection);
+    if (!_subscriptions.contains(collection)) {
+      _subscriptions.add(collection);
+      if (_channel != null && _projectId != null) {
+        _sendSubscribe(collection);
       } else {
         _connect();
       }
     }
 
-    return _controllers[channelKey]!.stream;
+    return _controllers[collection]!.stream;
   }
 
-  /// Convenience: stream only record-created events
-  Stream<Map<String, dynamic>> onRecordCreated({
-    required String projectId,
-    required String collection,
-  }) {
-    return on(projectId: projectId, collection: collection)
+  Stream<Map<String, dynamic>> onRecordCreated({required String collection}) {
+    return on(collection: collection)
         .where((e) => e.type == RealtimeEventType.recordCreated)
         .where((e) => e.record != null)
         .map((e) => e.record!);
   }
 
-  /// Convenience: stream only record-updated events
-  Stream<Map<String, dynamic>> onRecordUpdated({
-    required String projectId,
-    required String collection,
-  }) {
-    return on(projectId: projectId, collection: collection)
+  Stream<Map<String, dynamic>> onRecordUpdated({required String collection}) {
+    return on(collection: collection)
         .where((e) => e.type == RealtimeEventType.recordUpdated)
         .where((e) => e.record != null)
         .map((e) => e.record!);
   }
 
-  /// Convenience: stream only record-deleted events (returns record ID)
-  Stream<String> onRecordDeleted({
-    required String projectId,
-    required String collection,
-  }) {
-    return on(projectId: projectId, collection: collection)
+  Stream<String> onRecordDeleted({required String collection}) {
+    return on(collection: collection)
         .where((e) => e.type == RealtimeEventType.recordDeleted)
         .where((e) => e.recordId != null)
         .map((e) => e.recordId!);

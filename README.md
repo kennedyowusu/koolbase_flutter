@@ -19,7 +19,7 @@ Auth, database, storage, realtime, functions, feature flags, remote config, vers
 
 ```yaml
 dependencies:
-  koolbase_flutter: ^5.0.0
+  koolbase_flutter: ^6.0.0
 ```
 
 **4. Initialize before `runApp()`:**
@@ -266,28 +266,28 @@ await Koolbase.storage.delete(bucket: 'avatars', path: 'user-123.jpg');
 
 ## Realtime
 
-Stream live changes on a collection. Realtime uses the signed-in user's session,
-so subscribe after login. Supports collections whose read rule is `public` or
+Stream live changes on a collection. Uses the signed-in user's session, so
+subscribe after login. Supports collections whose read rule is `public` or
 `authenticated`.
 
 ```dart
-final sub = Koolbase.realtime
-    .on(projectId: yourProjectId, collection: 'messages')
-    .listen((event) {
+final sub = Koolbase.realtime.on(collection: 'messages').listen((event) {
   // event.type -> recordCreated | recordUpdated | recordDeleted
-  print('${event.type}: ${event.record}');
+  if (event.type == RealtimeEventType.recordDeleted) {
+    print('deleted ${event.recordId}');
+  } else {
+    print('${event.type}: ${event.record}');
+  }
 });
 
 // Or filter to one kind:
-Koolbase.realtime
-    .onRecordCreated(projectId: yourProjectId, collection: 'messages')
-    .listen((record) => print(record));
+Koolbase.realtime.onRecordCreated(collection: 'messages').listen(print);
 
-await sub.cancel(); // stop listening
+await sub.cancel();
 ```
 
-`yourProjectId` is your project's ID from the dashboard. The socket opens lazily,
-is shared across subscriptions, and reconnects automatically.
+The socket opens lazily, is shared across subscriptions, and reconnects
+automatically. The project is taken from your session — you don't pass it.
 
 ---
 
