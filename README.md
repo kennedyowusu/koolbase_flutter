@@ -18,23 +18,23 @@ Auth, database, storage, realtime, functions, feature flags, remote config, vers
 3. Add the SDK
 
 ```yaml
-dependencies:
-  koolbase_flutter: ^6.0.0
+   dependencies:
+     koolbase_flutter: ^7.0.0
 ```
 
-**4. Initialize before `runApp()`:**
+4. Initialize before `runApp()`:
 
 ```dart
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+   void main() async {
+     WidgetsFlutterBinding.ensureInitialized();
 
-  await Koolbase.initialize(KoolbaseConfig(
-    publicKey: 'pk_live_xxxx',
-    baseUrl: 'https://api.koolbase.com',
-  ));
+     await Koolbase.initialize(KoolbaseConfig(
+       publicKey: 'pk_live_xxxx',
+       baseUrl: 'https://api.koolbase.com',
+     ));
 
-  runApp(MyApp());
-}
+     runApp(MyApp());
+   }
 ```
 
 That's it. Every feature below is now available via `Koolbase.*`.
@@ -244,12 +244,25 @@ await Koolbase.db.syncPendingWrites();
 
 ## Storage
 
+Upload and serve files via presigned URLs to Cloudflare R2. Uploads are
+**safe-by-default** (v7+) — uploading to a path that's already taken throws
+`KoolbaseStorageConflictException` instead of silently replacing the
+existing file. Pass `overwrite: true` for true upsert semantics.
+
 ```dart
-// Upload
+// Upload — rejects if `user-123.jpg` already exists
 await Koolbase.storage.upload(
   bucket: 'avatars',
   path: 'user-123.jpg',
   file: file,
+);
+
+// Upload — silently replaces any existing object at this path
+await Koolbase.storage.upload(
+  bucket: 'avatars',
+  path: 'user-123.jpg',
+  file: file,
+  overwrite: true,
 );
 
 // Get download URL
@@ -261,6 +274,32 @@ final url = await Koolbase.storage.getDownloadUrl(
 // Delete
 await Koolbase.storage.delete(bucket: 'avatars', path: 'user-123.jpg');
 ```
+
+### Handling upload conflicts
+
+For user-supplied filenames, prompt the user before overwriting:
+
+```dart
+try {
+  await Koolbase.storage.upload(
+    bucket: 'documents',
+    path: filename,
+    file: file,
+  );
+} on KoolbaseStorageConflictException catch (e) {
+  final ok = await confirmDialog('${e.path} already exists. Overwrite?');
+  if (ok) {
+    await Koolbase.storage.upload(
+      bucket: 'documents',
+      path: filename,
+      file: file,
+      overwrite: true,
+    );
+  }
+}
+```
+
+See [Error handling](#error-handling) for the full set of storage exceptions.
 
 ---
 
@@ -377,6 +416,7 @@ final enabled = Koolbase.isEnabled('new_checkout_flow');
 Koolbase.codePush.onDirective('force_logout_all', (value) {
   if (value == true) Koolbase.auth.logout();
 });
+```
 
 ### Mandatory updates
 
@@ -400,7 +440,6 @@ if (Koolbase.codePush.hasMandatoryUpdate) {
 
 A mandatory bundle still activates on the next cold launch like any other; the callback and flag just let you prompt the user to restart now instead of waiting.
 
-```
 > Need to ship raw files and read them yourself? Use [Storage](https://docs.koolbase.com/storage/overview) instead.
 
 ---
@@ -542,6 +581,36 @@ try {
 > rejection (e.g. a unique conflict) surfaces immediately rather than being
 > silently queued.
 
+### Storage errors
+
+All storage failures extend `KoolbaseStorageException` (which implements
+`Exception`):
+
+| Exception | When |
+|---|---|
+| `KoolbaseStorageConflictException` | An upload targets a path that's already taken and `overwrite: false` (409, code `PATH_CONFLICT`). Exposes `.path` — the colliding path. |
+| `KoolbaseStorageNotFoundException` | The bucket or object doesn't exist (404). |
+| `KoolbaseStorageValidationException` | The request was rejected as invalid — bad path, missing field (400). |
+| `KoolbaseStoragePermissionException` | The caller is not allowed to perform the operation (403). |
+
+```dart
+try {
+  await Koolbase.storage.upload(
+    bucket: 'avatars',
+    path: 'me.png',
+    file: file,
+  );
+} on KoolbaseStorageConflictException catch (e) {
+  // Already exists — prompt the user to confirm overwrite
+  promptOverwrite(e.path);
+} on KoolbaseStoragePermissionException {
+  showError('You do not have permission to upload here.');
+} on KoolbaseStorageException catch (e) {
+  // Catch-all for any other storage error
+  showError(e.message);
+}
+```
+
 ### Auth errors
 
 Auth methods throw `KoolbaseAuthException` subtypes — `InvalidCredentialsException`,
@@ -554,7 +623,7 @@ and so on — also selected from the server's error `code`.
 
 - Authentication: email + password, Apple Sign-In, Google Sign-In, phone + OTP
 - Database with offline-first cache (Drift), realtime subscriptions, populate for related records
-- Storage with download URLs and progress callbacks
+- Storage with presigned uploads and downloads, safe-by-default conflict handling
 - Realtime subscriptions over WebSocket
 - Authenticated Dart functions (`ctx.auth` exposes the caller automatically)
 - Feature flags and remote config
