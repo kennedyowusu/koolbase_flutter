@@ -19,7 +19,7 @@ Auth, database, storage, realtime, functions, feature flags, remote config, vers
 
 ```yaml
    dependencies:
-     koolbase_flutter: ^7.0.0
+     koolbase_flutter: ^6.0.0
 ```
 
 4. Initialize before `runApp()`:
@@ -245,7 +245,7 @@ await Koolbase.db.syncPendingWrites();
 ## Storage
 
 Upload and serve files via presigned URLs to Cloudflare R2. Uploads are
-**safe-by-default** (v7+) — uploading to a path that's already taken throws
+**safe-by-default** (v6+) — uploading to a path that's already taken throws
 `KoolbaseStorageConflictException` instead of silently replacing the
 existing file. Pass `overwrite: true` for true upsert semantics.
 

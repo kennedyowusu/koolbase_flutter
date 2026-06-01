@@ -1,6 +1,10 @@
-# 7.0.0
+# 6.0.0
 
-### Breaking — storage upload conflict safety
+### Breaking — realtime
+
+- `Koolbase.realtime.on` / `onRecordCreated` / `onRecordUpdated` / `onRecordDeleted` no longer take a `projectId` — the project is derived from your session token, matching the React Native SDK. Migrate `on(projectId: ..., collection: 'x')` to `on(collection: 'x')`.
+
+### Breaking — storage
 
 - `KoolbaseStorageClient.upload()` is now **safe-by-default**. Uploads to a
   path where an object already exists are **rejected** with a new
@@ -14,20 +18,20 @@
 
 ### Added
 
-- `KoolbaseStorageException` — base class for all storage failures,
-  mirroring the `KoolbaseDataException` pattern from the database layer.
-- `KoolbaseStorageConflictException` (`code: PATH_CONFLICT`) — thrown when
-  an upload would replace an existing object and `overwrite: false`.
-  Exposes the colliding `path` from the server response.
+- `KoolbaseStorageException` — base class for all storage failures, mirroring
+  the `KoolbaseDataException` pattern from the database layer.
+- `KoolbaseStorageConflictException` (`code: PATH_CONFLICT`) — thrown when an
+  upload would replace an existing object and `overwrite: false`. Exposes the
+  colliding `path` from the server response.
 - `KoolbaseStorageNotFoundException`, `KoolbaseStorageValidationException`,
   `KoolbaseStoragePermissionException` — typed exceptions for the other
-  storage error classes (404, 400, 403). Storage operations now throw
-  these instead of a generic `Exception`.
+  storage error classes (404, 400, 403). Storage operations now throw these
+  instead of a generic `Exception`.
 - `koolbaseStorageError(statusCode, body)` and
   `koolbaseStorageErrorFromResponse(res)` — code-first response-to-exception
   mappers, matching the database layer's pattern.
 
-### Migration
+### Migration — storage uploads
 
 **If your app uploads to deterministic paths** (e.g. `avatars/{user_id}.png`)
 **and relied on the upload silently replacing the previous file:**
@@ -94,12 +98,6 @@ try {
 
 - Requires a Koolbase server build with `PATH_CONFLICT` 409 support
   (shipped alongside this release).
-
-## 6.0.0
-
-### Breaking
-
-- `Koolbase.realtime.on` / `onRecordCreated` / `onRecordUpdated` / `onRecordDeleted` no longer take a `projectId` — the project is derived from your session token, matching the React Native SDK. Migrate `on(projectId: ..., collection: 'x')` to `on(collection: 'x')`.
 
 # 5.1.0
 
