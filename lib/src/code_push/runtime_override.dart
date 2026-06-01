@@ -34,8 +34,10 @@ class RuntimeOverrideEngine {
     _applyDirectives(manifest.payload.directives);
 
     debugPrint('$_tag applied bundle v${manifest.version}');
-    debugPrint('$_tag config overrides: ${manifest.payload.config.keys.toList()}');
-    debugPrint('$_tag flag overrides:   ${manifest.payload.flags.keys.toList()}');
+    debugPrint(
+        '$_tag config overrides: ${manifest.payload.config.keys.toList()}');
+    debugPrint(
+        '$_tag flag overrides:   ${manifest.payload.flags.keys.toList()}');
   }
 
   void _applyDirectives(Map<String, dynamic> directives) {
@@ -58,8 +60,7 @@ class RuntimeOverrideEngine {
 
   dynamic getConfig(String key) => _config[key];
 
-  bool getFlag(String key, {bool fallback = false}) =>
-      _flags[key] ?? fallback;
+  bool getFlag(String key, {bool fallback = false}) => _flags[key] ?? fallback;
 
   Map<String, dynamic> get allConfig => Map.unmodifiable(_config);
   Map<String, bool> get allFlags => Map.unmodifiable(_flags);

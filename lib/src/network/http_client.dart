@@ -14,7 +14,8 @@ class KoolbaseHttpClient {
     this.onUnauthorized,
   });
 
-  Future<Map<String, String>> _buildHeaders({bool authenticated = false}) async {
+  Future<Map<String, String>> _buildHeaders(
+      {bool authenticated = false}) async {
     final headers = <String, String>{
       'Content-Type': 'application/json',
       'x-api-key': publicKey,
@@ -36,7 +37,8 @@ class KoolbaseHttpClient {
     final res = await http
         .get(Uri.parse('$baseUrl$path'), headers: headers)
         .timeout(const Duration(seconds: 10));
-    return _handleUnauthorized(res, () => get(path, authenticated: authenticated));
+    return _handleUnauthorized(
+        res, () => get(path, authenticated: authenticated));
   }
 
   Future<http.Response> post(
@@ -52,7 +54,8 @@ class KoolbaseHttpClient {
           body: body != null ? jsonEncode(body) : null,
         )
         .timeout(const Duration(seconds: 10));
-    return _handleUnauthorized(res, () => post(path, body: body, authenticated: authenticated));
+    return _handleUnauthorized(
+        res, () => post(path, body: body, authenticated: authenticated));
   }
 
   Future<http.Response> patch(
@@ -68,7 +71,8 @@ class KoolbaseHttpClient {
           body: body != null ? jsonEncode(body) : null,
         )
         .timeout(const Duration(seconds: 10));
-    return _handleUnauthorized(res, () => patch(path, body: body, authenticated: authenticated));
+    return _handleUnauthorized(
+        res, () => patch(path, body: body, authenticated: authenticated));
   }
 
   Future<http.Response> _handleUnauthorized(

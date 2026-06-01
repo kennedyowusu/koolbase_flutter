@@ -57,19 +57,21 @@ class KoolbaseMessaging {
     }
 
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/v1/messaging/register'),
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-        },
-        body: jsonEncode({
-          'device_id': _deviceId,
-          'token': token,
-          'platform': platform,
-          if (userId != null) 'user_id': userId,
-        }),
-      ).timeout(const Duration(seconds: 10));
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/v1/messaging/register'),
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': apiKey,
+            },
+            body: jsonEncode({
+              'device_id': _deviceId,
+              'token': token,
+              'platform': platform,
+              if (userId != null) 'user_id': userId,
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         debugPrint('$_tag token registered successfully');
@@ -95,19 +97,21 @@ class KoolbaseMessaging {
     Map<String, dynamic> data = const {},
   }) async {
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/v1/messaging/send'),
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-        },
-        body: jsonEncode({
-          'token': to,
-          'title': title,
-          'body': body,
-          'data': data,
-        }),
-      ).timeout(const Duration(seconds: 10));
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/v1/messaging/send'),
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': apiKey,
+            },
+            body: jsonEncode({
+              'token': to,
+              'title': title,
+              'body': body,
+              'data': data,
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         debugPrint('$_tag notification sent successfully');

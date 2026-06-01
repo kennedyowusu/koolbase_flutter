@@ -48,5 +48,6 @@ class ScreenLookupResult {
 
 abstract class KoolbaseScreenClient {
   Future<ScreenLookupResult> resolveScreen(String screenId);
-  FlowResult executeFlow({required String flowId, Map<String, dynamic>? context});
+  FlowResult executeFlow(
+      {required String flowId, Map<String, dynamic>? context});
 }

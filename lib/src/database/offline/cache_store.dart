@@ -94,8 +94,6 @@ class CacheStore {
   }
 
   Future<void> deleteRecord(String id) async {
-    await (_db.delete(_db.cachedRecords)
-          ..where((t) => t.id.equals(id)))
-        .go();
+    await (_db.delete(_db.cachedRecords)..where((t) => t.id.equals(id))).go();
   }
 }

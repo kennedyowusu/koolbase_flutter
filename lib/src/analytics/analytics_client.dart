@@ -175,14 +175,16 @@ class KoolbaseAnalyticsClient {
     debugPrint('$_tag flushing ${batch.length} events');
 
     try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/v1/analytics/events'),
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-        },
-        body: jsonEncode({'events': batch.map((e) => e.toJson()).toList()}),
-      ).timeout(const Duration(seconds: 10));
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/v1/analytics/events'),
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': apiKey,
+            },
+            body: jsonEncode({'events': batch.map((e) => e.toJson()).toList()}),
+          )
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 202) {
         debugPrint('$_tag flushed ${batch.length} events successfully');

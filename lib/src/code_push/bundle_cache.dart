@@ -22,8 +22,7 @@ class BundleCache {
     return cache;
   }
 
-  Directory _dir(CacheSlot slot) =>
-      Directory('${_root.path}/${slot.name}');
+  Directory _dir(CacheSlot slot) => Directory('${_root.path}/${slot.name}');
 
   File _file(CacheSlot slot, String bundleId) =>
       File('${_dir(slot).path}/$bundleId.zip');
@@ -59,10 +58,8 @@ class BundleCache {
 
   // Returns the single zip file in a slot, or null
   Future<File?> slotFile(CacheSlot slot) async {
-    final files = await _dir(slot)
-        .list()
-        .where((f) => f.path.endsWith('.zip'))
-        .toList();
+    final files =
+        await _dir(slot).list().where((f) => f.path.endsWith('.zip')).toList();
     if (files.isEmpty) return null;
     return File(files.first.path);
   }

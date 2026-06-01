@@ -4,7 +4,8 @@ import 'package:crypto/crypto.dart';
 class BundleVerifier {
   const BundleVerifier();
 
-  Future<VerificationResult> verify(File zipFile, String expectedChecksum) async {
+  Future<VerificationResult> verify(
+      File zipFile, String expectedChecksum) async {
     // Skip verification for placeholder checksums (dev/test only)
     if (expectedChecksum == 'placeholder' ||
         expectedChecksum == 'WILL_REPLACE') {
