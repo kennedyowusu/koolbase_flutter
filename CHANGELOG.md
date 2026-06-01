@@ -1,4 +1,15 @@
-# 6.1.0
+# 6.1.1
+
+### Fixed
+
+- Storage error mapper switches on lowercase wire codes (`path_conflict`,
+  `quota_exceeded`, `file_too_large`, `mime_not_allowed`) after the server
+  normalized storage codes to lowercase snake_case. Without this patch,
+  v6.1.0 customers see generic `KoolbaseStorageException` instead of the
+  typed subclass for storage limit errors. No semantic changes beyond
+  the case match.
+
+## 6.1.0
 
 * feat(storage): three new typed exceptions for bucket-limit failures
   introduced server-side in Storage #2. All extend
