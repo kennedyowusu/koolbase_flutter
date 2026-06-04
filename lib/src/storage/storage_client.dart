@@ -236,15 +236,27 @@ class KoolbaseStorageClient {
   /// [KoolbaseObject.publicUrl] — it checks the stored `r2_bucket`
   /// value and returns `null` when the object isn't actually in the
   /// public R2 bucket.
+  /// Optional [transform] applies Cloudflare Image Transformations to the
+  /// returned URL via the `/cdn-cgi/image/<OPTIONS>/` URL prefix. Transforms
+  /// are billed against the koolbase.com zone's monthly free allocation
+  /// (5,000 unique transforms/month); each unique combination of `path` +
+  /// options is cached and billed only once per calendar month. The first
+  /// 5,000 transforms each month are free; beyond that, new transforms
+  /// return a 9422 from the edge until the next billing cycle.
   static String publicUrl({
     required String projectId,
     required String bucket,
     required String path,
+    KoolbaseImageTransform? transform,
   }) {
     // Encode each path segment individually so slashes are preserved
     // while spaces, parens, hashes, and query characters are escaped.
     final encoded = path.split('/').map(Uri.encodeComponent).join('/');
-    return 'https://cdn.koolbase.com/$projectId/$bucket/$encoded';
+    final opts = transform?.toCloudflareOptions() ?? '';
+    if (opts.isEmpty) {
+      return 'https://cdn.koolbase.com/$projectId/$bucket/$encoded';
+    }
+    return 'https://cdn.koolbase.com/cdn-cgi/image/$opts/$projectId/$bucket/$encoded';
   }
 
   /// Delete a file from a bucket
