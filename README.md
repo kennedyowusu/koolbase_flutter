@@ -19,7 +19,7 @@ Auth, database, storage, realtime, functions, feature flags, remote config, vers
 
 ```yaml
    dependencies:
-     koolbase_flutter: ^6.3.0
+     koolbase_flutter: ^6.5.0
 ```
 
 4. Initialize before `runApp()`:
@@ -415,6 +415,71 @@ See [Error handling](#error-handling) for the full set of storage exceptions.
 
 ---
 
+### Object versioning
+
+For buckets with versioning enabled, every overwrite preserves the prior
+content as a history version, and deletes are soft (recoverable until
+force-purged). Enable versioning on a bucket from the dashboard.
+
+```dart
+// List all versions of a path, newest first
+final versions = await Koolbase.storage.listVersions(
+  bucket: 'documents',
+  path: 'contract.pdf',
+);
+
+for (final v in versions) {
+  print('${v.versionId}: size=${v.size} isCurrent=${v.isCurrent}');
+}
+
+// Download a specific historical version
+final url = await Koolbase.storage.getDownloadUrl(
+  bucket: 'documents',
+  path: 'contract.pdf',
+  versionId: '019e98ed-eed6-7e71-...',
+);
+
+// Bring a history version back as current
+// (the existing current is snapshotted to history first)
+final restored = await Koolbase.storage.restoreVersion(
+  bucket: 'documents',
+  path: 'contract.pdf',
+  versionId: '019e98ed-eed6-7e71-...',
+);
+
+// Hard-remove a single history version (row + R2 bytes)
+await Koolbase.storage.purgeVersion(
+  bucket: 'documents',
+  path: 'contract.pdf',
+  versionId: 'old-version-id',
+);
+
+// Wipe the entire timeline for a path - every version, every R2 key
+await Koolbase.storage.delete(
+  bucket: 'documents',
+  path: 'contract.pdf',
+  forcePurge: true,
+);
+```
+
+A few behaviors worth knowing:
+
+- **Overwrite snapshots automatically.** Upload to a path that already
+  exists in a versioned bucket and the prior bytes are preserved as
+  history; the upload becomes the new current.
+- **Delete is soft by default.** On a versioned bucket, `delete`
+  snapshots the current content and records a delete marker. The
+  content is still recoverable via `restoreVersion` until force-purged.
+- **Restore is itself a versioned event.** The previously-current row
+  gets snapshotted before the target's bytes overwrite canonical. The
+  restored row gets a fresh `versionId`; the target stays in history at
+  its original id - so you can always undo a restore.
+- **Delete markers can be listed but not downloaded.** A marker has
+  `size == 0`, `isDeleteMarker == true`, and no bytes. Calling
+  `getDownloadUrl` with a marker's `versionId` throws.
+
+---
+
 ## Realtime
 
 Stream live changes on a collection. Uses the signed-in user's session, so
@@ -738,7 +803,7 @@ and so on — also selected from the server's error `code`.
 
 - Authentication: email + password, Apple Sign-In, Google Sign-In, phone + OTP
 - Database with offline-first cache (Drift), realtime subscriptions, populate for related records
-- Storage with presigned uploads and downloads, safe-by-default conflict handling
+- Storage with presigned uploads and downloads, safe-by-default conflict handling, image transforms, object versioning (history + restore + soft-delete)
 - Realtime subscriptions over WebSocket
 - Authenticated Dart functions (`ctx.auth` exposes the caller automatically)
 - Feature flags and remote config
