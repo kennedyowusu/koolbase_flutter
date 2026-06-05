@@ -1,3 +1,34 @@
+# Changelog
+
+## 6.5.0
+
+Object versioning support — full read + write surface against versioned
+buckets. None of this changes existing behavior on non-versioned buckets.
+
+### New
+
+- `KoolbaseObjectVersion` model — one entry in a path's version timeline.
+  Carries `versionId`, `size`, `metadata`, `isDeleteMarker`, `isCurrent`,
+  `createdAt` and the rest of the version-row shape.
+- `KoolbaseStorageClient.listVersions({bucket, path})` — returns the full
+  timeline newest-first, current + history mixed.
+- `KoolbaseStorageClient.getVersion({bucket, path, versionId})` — metadata
+  for one specific version.
+- `KoolbaseStorageClient.restoreVersion({bucket, path, versionId})` — brings
+  a history version back to current; the previously-current row is
+  snapshotted to history first, so the restore is itself a versioned event.
+- `KoolbaseStorageClient.purgeVersion({bucket, path, versionId})` — hard
+  removes a single history version (row + R2 bytes).
+
+### Extended
+
+- `KoolbaseStorageClient.getDownloadUrl(...)` accepts an optional
+  `versionId` — when present, the returned URL points to that specific
+  version's bytes from `.versions/`.
+- `KoolbaseStorageClient.delete(...)` accepts an optional `forcePurge`
+  — `true` wipes the entire timeline for the path (all history rows,
+  all `.versions/` R2 keys, canonical, and the current row).
+
 # 6.4.0
 
 * feat(storage): edge image transforms (Gap #8).

@@ -203,14 +203,25 @@ class KoolbaseStorageClient {
   }
 
   /// Get a signed download URL for a file
+  /// Get a signed download URL for a file. Pass [versionId] to fetch a
+  /// specific historical version's bytes; without it, returns a URL to
+  /// the current version (existing behavior). On a public bucket the
+  /// current-version URL is a CDN URL (long-lived, embeddable); history
+  /// versions always return a presigned URL since the .versions/ prefix
+  /// isn't routed through the CDN.
   Future<String> getDownloadUrl({
     required String bucket,
     required String path,
+    String? versionId,
   }) async {
+    final queryParts = <String>['bucket=$bucket', 'path=$path'];
+    if (versionId != null) {
+      queryParts.add('version_id=$versionId');
+    }
     final res = await http
         .get(
           Uri.parse(
-              '$baseUrl/v1/sdk/storage/download-url?bucket=$bucket&path=$path'),
+              '$baseUrl/v1/sdk/storage/download-url?${queryParts.join('&')}'),
           headers: await _headers(),
         )
         .timeout(const Duration(seconds: 10));
@@ -282,14 +293,22 @@ class KoolbaseStorageClient {
     return 'https://cdn.koolbase.com/p/$projectId/$presetName/$bucket/$encoded';
   }
 
-  /// Delete a file from a bucket
+  /// Delete a file from a bucket. With [forcePurge] true on a versioned
+  /// bucket, wipes the entire timeline — every history row, every
+  /// .versions/ R2 key, the canonical R2 key, and the current row.
+  /// Without the flag, versioned buckets soft-delete with a marker;
+  /// non-versioned hard-delete in place.
   Future<void> delete({
     required String bucket,
     required String path,
+    bool forcePurge = false,
   }) async {
+    final url = forcePurge
+        ? '$baseUrl/v1/sdk/storage/object?force_purge=true'
+        : '$baseUrl/v1/sdk/storage/object';
     final res = await http
         .delete(
-          Uri.parse('$baseUrl/v1/sdk/storage/object'),
+          Uri.parse(url),
           headers: await _headers(),
           body: jsonEncode({'bucket': bucket, 'path': path}),
         )
@@ -316,5 +335,113 @@ class KoolbaseStorageClient {
       'txt': 'text/plain',
     };
     return types[ext] ?? 'application/octet-stream';
+  }
+
+  /// List all versions of a file path, newest-first. Returns a flat
+  /// list mixing the current row (with [KoolbaseObjectVersion.isCurrent]
+  /// true) and all history rows. Delete markers are included so callers
+  /// can render the full timeline; filter client-side to hide them if
+  /// the UI only wants restorable versions.
+  ///
+  /// Returns an empty list (not an error) when the path has no history
+  /// and no current row.
+  Future<List<KoolbaseObjectVersion>> listVersions({
+    required String bucket,
+    required String path,
+  }) async {
+    final res = await http
+        .get(
+          Uri.parse(
+              '$baseUrl/v1/sdk/storage/object-versions?bucket=$bucket&path=$path'),
+          headers: await _headers(),
+        )
+        .timeout(const Duration(seconds: 10));
+
+    if (res.statusCode != 200) {
+      throw koolbaseStorageErrorFromResponse(res,
+          fallbackMessage: 'Failed to list versions');
+    }
+    final json = jsonDecode(res.body) as Map<String, dynamic>;
+    final list = (json['versions'] as List? ?? const [])
+        .cast<Map<String, dynamic>>()
+        .map(KoolbaseObjectVersion.fromJson)
+        .toList(growable: false);
+    return list;
+  }
+
+  /// Fetch metadata for a single version by id. Works against both the
+  /// current row and any history row — the response's [isCurrent] tells
+  /// you which.
+  Future<KoolbaseObjectVersion> getVersion({
+    required String bucket,
+    required String path,
+    required String versionId,
+  }) async {
+    final res = await http
+        .get(
+          Uri.parse(
+              '$baseUrl/v1/sdk/storage/object-versions/$versionId?bucket=$bucket&path=$path'),
+          headers: await _headers(),
+        )
+        .timeout(const Duration(seconds: 10));
+
+    if (res.statusCode != 200) {
+      throw koolbaseStorageErrorFromResponse(res,
+          fallbackMessage: 'Failed to fetch version');
+    }
+    return KoolbaseObjectVersion.fromJson(
+        jsonDecode(res.body) as Map<String, dynamic>);
+  }
+
+  /// Bring a history version back as the current version. The
+  /// previously-current row (if any) is snapshotted into history first,
+  /// so this operation is itself a versioned event you can undo. The
+  /// restored row gets a freshly-minted version_id; the target stays in
+  /// history at its original version_id.
+  ///
+  /// Throws if the bucket has versioning off, if the target is the
+  /// already-current version, or if the target is a delete marker.
+  Future<KoolbaseObject> restoreVersion({
+    required String bucket,
+    required String path,
+    required String versionId,
+  }) async {
+    final res = await http
+        .post(
+          Uri.parse(
+              '$baseUrl/v1/sdk/storage/object-versions/$versionId/restore?bucket=$bucket&path=$path'),
+          headers: await _headers(),
+        )
+        .timeout(const Duration(seconds: 10));
+
+    if (res.statusCode != 200) {
+      throw koolbaseStorageErrorFromResponse(res,
+          fallbackMessage: 'Failed to restore version');
+    }
+    return KoolbaseObject.fromJson(
+        jsonDecode(res.body) as Map<String, dynamic>);
+  }
+
+  /// Hard-remove a single history version — both the metadata row and
+  /// the .versions/ R2 bytes (or just the row, for delete markers).
+  /// Refuses to operate on the current version; use [delete] with
+  /// `forcePurge: true` to wipe everything for a path.
+  Future<void> purgeVersion({
+    required String bucket,
+    required String path,
+    required String versionId,
+  }) async {
+    final res = await http
+        .delete(
+          Uri.parse(
+              '$baseUrl/v1/sdk/storage/object-versions/$versionId?bucket=$bucket&path=$path'),
+          headers: await _headers(),
+        )
+        .timeout(const Duration(seconds: 10));
+
+    if (res.statusCode != 204) {
+      throw koolbaseStorageErrorFromResponse(res,
+          fallbackMessage: 'Failed to purge version');
+    }
   }
 }

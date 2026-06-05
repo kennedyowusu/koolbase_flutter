@@ -307,3 +307,78 @@ class KoolbaseImageTransform {
     }
   }
 }
+
+/// One entry in an object's version timeline. Covers both the current
+/// row (when [isCurrent] is true) and every history row, including
+/// soft-delete markers ([isDeleteMarker] true, size 0, no fetchable
+/// bytes). Returned from [KoolbaseStorageClient.listVersions] and
+/// [KoolbaseStorageClient.getVersion]; the underlying bytes are
+/// downloadable via [KoolbaseStorageClient.getDownloadUrl] with the
+/// `versionId` argument.
+///
+/// [versionId] may be null only on legacy rows uploaded before
+/// versioning was enabled on the bucket — for those, [isCurrent] is
+/// true and the row carries no history identity yet (gets backfilled
+/// on the next overwrite).
+class KoolbaseObjectVersion {
+  final String? versionId;
+  final String path;
+  final int size;
+  final String? contentType;
+  final String? etag;
+  final Map<String, String> metadata;
+  final String r2Bucket;
+  final String? userId;
+
+  /// True for a tombstone row (recorded soft-delete event). Size is 0
+  /// and there are no R2 bytes — callers should treat this version as
+  /// "the path was deleted at this time" rather than fetchable content.
+  final bool isDeleteMarker;
+
+  /// True for the row that currently lives in `storage_objects` (i.e.
+  /// what a no-versionId download returns). False for everything in
+  /// `storage_object_versions`.
+  final bool isCurrent;
+
+  /// For the current row this is the time the current version became
+  /// current (overwrite or upload time). For history rows it's the time
+  /// the version was originally uploaded.
+  final DateTime createdAt;
+
+  KoolbaseObjectVersion({
+    this.versionId,
+    required this.path,
+    required this.size,
+    this.contentType,
+    this.etag,
+    required this.metadata,
+    required this.r2Bucket,
+    this.userId,
+    required this.isDeleteMarker,
+    required this.isCurrent,
+    required this.createdAt,
+  });
+
+  factory KoolbaseObjectVersion.fromJson(Map<String, dynamic> json) {
+    final rawMeta = json['metadata'];
+    final metadata = <String, String>{};
+    if (rawMeta is Map) {
+      rawMeta.forEach((k, v) {
+        if (v is String) metadata[k.toString()] = v;
+      });
+    }
+    return KoolbaseObjectVersion(
+      versionId: json['version_id'] as String?,
+      path: json['path'] as String,
+      size: (json['size'] as num).toInt(),
+      contentType: json['content_type'] as String?,
+      etag: json['etag'] as String?,
+      metadata: metadata,
+      r2Bucket: json['r2_bucket'] as String? ?? '',
+      userId: json['user_id'] as String?,
+      isDeleteMarker: json['is_delete_marker'] as bool? ?? false,
+      isCurrent: json['is_current'] as bool? ?? false,
+      createdAt: DateTime.parse(json['created_at'] as String),
+    );
+  }
+}
