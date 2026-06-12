@@ -97,6 +97,24 @@ class KoolbaseVmPatchClient {
     return prefs.getInt(_kCurrentPatch) ?? 0;
   }
 
+  /// Stable device id for rollout bucketing. Prefers the keychain-backed id;
+  /// if secure storage is unavailable (e.g. missing keychain entitlement),
+  /// falls back to a shared_prefs id so the check-in still works — device_id
+  /// is non-critical bucketing data.
+  Future<String> _deviceId() async {
+    try {
+      return await DeviceIdManager.getOrCreate();
+    } catch (_) {
+      final prefs = await SharedPreferences.getInstance();
+      var id = prefs.getString('koolbase_vm_device_id');
+      if (id == null || id.isEmpty) {
+        id = 'dev-${DateTime.now().microsecondsSinceEpoch}';
+        await prefs.setString('koolbase_vm_device_id', id);
+      }
+      return id;
+    }
+  }
+
   /// Reconcile + background check. Non-blocking, like System A.
   Future<void> init({String? buildIdOverride}) async {
     if (_initialized) return;
@@ -140,7 +158,7 @@ class KoolbaseVmPatchClient {
         'build_id': buildId,
         'platform': _platform(),
         'channel': channel,
-        'device_id': await DeviceIdManager.getOrCreate(),
+        'device_id': await _deviceId(),
         'current_patch': currentPatch.toString(),
       },
     );
