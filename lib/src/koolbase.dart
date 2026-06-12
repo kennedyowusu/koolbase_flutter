@@ -40,6 +40,7 @@ import 'payload.dart';
 export 'payload.dart';
 export 'auth/auth_models.dart';
 export 'auth/auth_exceptions.dart';
+import 'code_push/patch_client.dart';
 
 /// Configuration for the Koolbase SDK.
 class KoolbaseConfig {
@@ -109,6 +110,7 @@ class Koolbase {
   static SyncEngine? _syncEngine;
   static bool _initialized = false;
   static KoolbaseCodePushClient? _codePush;
+  static KoolbaseVmPatchClient? _vmPatch;
   static KoolbaseAnalyticsClient? _analytics;
   static KoolbaseMessaging? _messaging;
 
@@ -221,6 +223,14 @@ class Koolbase {
       remoteFlags: payload.flags.map((k, v) => MapEntry(k, v.enabled)),
     );
 
+    // Initialize VM-level (System B) patch client
+    _vmPatch = KoolbaseVmPatchClient(
+      baseUrl: config.baseUrl,
+      apiKey: config.publicKey,
+      channel: config.codePushChannel,
+    );
+    await _vmPatch!.init();
+
     // Fetch fresh flags in background
     instance._fetchAndUpdate();
     instance._startPolling();
@@ -310,6 +320,11 @@ class Koolbase {
   static KoolbaseCodePushClient get codePush {
     _ensureInitialized();
     return _codePush!;
+  }
+
+  static KoolbaseVmPatchClient get vmPatch {
+    _ensureInitialized();
+    return _vmPatch!;
   }
 
   /// Access the auth client
